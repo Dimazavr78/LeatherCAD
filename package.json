@@ -1,0 +1,17 @@
+{
+  "name": "leathercad",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Open-source parametric CAD for leathercraft",
+  "workspaces": [
+    "front",
+    "back"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=front",
+    "dev:front": "npm run dev --workspace=front",
+    "dev:back": "npm run dev --workspace=back",
+    "build": "npm run build --workspace=front && npm run build --workspace=back",
+    "test": "npm run test --workspaces"
+  }
+}
