@@ -3,6 +3,9 @@ import type { Point } from '../Canvas/canvasMath';
 interface BottomBarProps {
     zoom: number;
     cursorPosition: Point | null;
+    gridSpacing: number;
+    snapEnabled: boolean;
+    onSnapToggle: () => void;
     onZoomIn: () => void;
     onZoomOut: () => void;
     onResetZoom: () => void;
@@ -12,6 +15,9 @@ interface BottomBarProps {
 export function BottomBar({
                               zoom,
                               cursorPosition,
+                              gridSpacing,
+                              snapEnabled,
+                              onSnapToggle,
                               onZoomIn,
                               onZoomOut,
                               onResetZoom,
@@ -26,6 +32,14 @@ export function BottomBar({
                 <span>
                     Y: {cursorPosition ? `${cursorPosition.y.toFixed(2)} mm` : '—'}
                 </span>
+                <span>Grid: {gridSpacing} mm</span>
+                <button
+                    className={`snap-toggle ${snapEnabled ? 'snap-toggle--active' : ''}`}
+                    onClick={onSnapToggle}
+                    aria-pressed={snapEnabled}
+                >
+                    Snap: {snapEnabled ? 'ON' : 'OFF'}
+                </button>
             </div>
 
             <div className="zoom-controls">

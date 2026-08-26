@@ -1,6 +1,15 @@
-import { useRef, useState, type PointerEvent, type WheelEvent } from 'react';
+import {
+    useEffect,
+    useRef,
+    useState,
+    type PointerEvent,
+    type WheelEvent,
+} from 'react';
+import { HorizontalRuler } from './HorizontalRuler';
+import { VerticalRuler } from './VerticalRuler';
 import {
     calculateZoomPercent,
+    getGridSpacing,
     panViewBox,
     screenToCanvasCoordinates,
     zoomViewBoxAtPoint,
@@ -19,15 +28,68 @@ interface PanState {
     clientPosition: Point;
 }
 
+interface CanvasSize {
+    width: number;
+    height: number;
+}
+
 export function CanvasView({
     viewBox,
     onViewBoxChange,
     onCursorPositionChange,
 }: CanvasViewProps) {
+    const stageRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
     const panStateRef = useRef<PanState | null>(null);
     const [isPanning, setIsPanning] = useState(false);
-    const zoom = Math.round(calculateZoomPercent(viewBox));
+    const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 1, height: 1 });
+    const zoom = calculateZoomPercent(viewBox);
+    const gridSpacing = getGridSpacing(zoom);
+    const gridX = viewBox.x - viewBox.width;
+    const gridY = viewBox.y - viewBox.height;
+    const gridWidth = viewBox.width * 3;
+    const gridHeight = viewBox.height * 3;
+
+    useEffect(() => {
+        const stage = stageRef.current;
+
+        if (!stage) {
+            return;
+        }
+
+        const resizeObserver = new ResizeObserver(([entry]) => {
+            if (!entry) {
+                return;
+            }
+
+            const { width, height } = entry.contentRect;
+
+            if (width <= 0 || height <= 0) {
+                return;
+            }
+
+            setCanvasSize({ width, height });
+            onViewBoxChange((currentViewBox) => {
+                const nextHeight = currentViewBox.width * (height / width);
+
+                if (Math.abs(nextHeight - currentViewBox.height) < 0.001) {
+                    return currentViewBox;
+                }
+
+                const centerY = currentViewBox.y + currentViewBox.height / 2;
+
+                return {
+                    ...currentViewBox,
+                    y: centerY - nextHeight / 2,
+                    height: nextHeight,
+                };
+            });
+        });
+
+        resizeObserver.observe(stage);
+
+        return () => resizeObserver.disconnect();
+    }, [onViewBoxChange]);
 
     const getCanvasPoint = (clientX: number, clientY: number) => {
         const svg = svgRef.current;
@@ -43,7 +105,6 @@ export function CanvasView({
 
     const handleWheel = (event: WheelEvent<SVGSVGElement>) => {
         event.preventDefault();
-
         const point = getCanvasPoint(event.clientX, event.clientY);
 
         if (!point) {
@@ -118,149 +179,124 @@ export function CanvasView({
 
     return (
         <div className="canvas-view">
-            <svg
-                ref={svgRef}
-                className={`canvas-svg ${
-                    isPanning ? 'canvas-svg--panning' : ''
-                }`}
-                viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
-                preserveAspectRatio="xMidYMid meet"
-                onWheel={handleWheel}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={stopPanning}
-                onPointerCancel={stopPanning}
-                onPointerLeave={() => {
-                    if (!panStateRef.current) {
-                        onCursorPositionChange(null);
-                    }
-                }}
-                onContextMenu={(event) => event.preventDefault()}
-            >
-                <defs>
-                    {/* Мелкая сетка — 10 мм */}
-                    <pattern
-                        id="smallGrid"
-                        width="10"
-                        height="10"
-                        patternUnits="userSpaceOnUse"
+            <div className="canvas-ruler-corner" aria-hidden="true" />
+            <HorizontalRuler
+                viewBox={viewBox}
+                majorSpacing={gridSpacing.major}
+                width={canvasSize.width}
+            />
+            <VerticalRuler
+                viewBox={viewBox}
+                majorSpacing={gridSpacing.major}
+                height={canvasSize.height}
+            />
+
+            <div ref={stageRef} className="canvas-stage">
+                <svg
+                    ref={svgRef}
+                    className={`canvas-svg ${isPanning ? 'canvas-svg--panning' : ''}`}
+                    viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
+                    preserveAspectRatio="none"
+                    onWheel={handleWheel}
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={stopPanning}
+                    onPointerCancel={stopPanning}
+                    onPointerLeave={() => {
+                        if (!panStateRef.current) {
+                            onCursorPositionChange(null);
+                        }
+                    }}
+                    onContextMenu={(event) => event.preventDefault()}
+                >
+                    <defs>
+                        <pattern
+                            id="minorGrid"
+                            width={gridSpacing.minor}
+                            height={gridSpacing.minor}
+                            patternUnits="userSpaceOnUse"
+                        >
+                            <path
+                                d={`M ${gridSpacing.minor} 0 L 0 0 0 ${gridSpacing.minor}`}
+                                fill="none"
+                                stroke="#292c31"
+                                strokeWidth="0.5"
+                                vectorEffect="non-scaling-stroke"
+                            />
+                        </pattern>
+                        <pattern
+                            id="adaptiveGrid"
+                            width={gridSpacing.major}
+                            height={gridSpacing.major}
+                            patternUnits="userSpaceOnUse"
+                        >
+                            <rect
+                                width={gridSpacing.major}
+                                height={gridSpacing.major}
+                                fill="url(#minorGrid)"
+                            />
+                            <path
+                                d={`M ${gridSpacing.major} 0 L 0 0 0 ${gridSpacing.major}`}
+                                fill="none"
+                                stroke="#3a3e45"
+                                strokeWidth="1"
+                                vectorEffect="non-scaling-stroke"
+                            />
+                        </pattern>
+                    </defs>
+
+                    <rect x={gridX} y={gridY} width={gridWidth} height={gridHeight} fill="#15171a" />
+                    <rect
+                        x={gridX}
+                        y={gridY}
+                        width={gridWidth}
+                        height={gridHeight}
+                        fill="url(#adaptiveGrid)"
+                    />
+                    <line
+                        x1={gridX}
+                        y1="0"
+                        x2={gridX + gridWidth}
+                        y2="0"
+                        className="canvas-origin-axis"
+                    />
+                    <line
+                        x1="0"
+                        y1={gridY}
+                        x2="0"
+                        y2={gridY + gridHeight}
+                        className="canvas-origin-axis"
+                    />
+                    <circle cx="0" cy="0" r="3" className="canvas-origin-mark" />
+
+                    <rect
+                        x="-50"
+                        y="-35"
+                        width="100"
+                        height="70"
+                        fill="#25282d"
+                        stroke="#b8bdc5"
+                        strokeWidth="1"
+                        vectorEffect="non-scaling-stroke"
+                    />
+                    <text x="0" y="55" textAnchor="middle" className="canvas-dimension-label">
+                        100 mm
+                    </text>
+                    <text
+                        x="65"
+                        y="0"
+                        textAnchor="middle"
+                        transform="rotate(90 65 0)"
+                        className="canvas-dimension-label"
                     >
-                        <path
-                            d="M 10 0 L 0 0 0 10"
-                            fill="none"
-                            stroke="#292c31"
-                            strokeWidth="0.5"
-                        />
-                    </pattern>
+                        70 mm
+                    </text>
+                </svg>
 
-                    {/* Крупная сетка — 50 мм */}
-                    <pattern
-                        id="largeGrid"
-                        width="50"
-                        height="50"
-                        patternUnits="userSpaceOnUse"
-                    >
-                        <rect
-                            width="50"
-                            height="50"
-                            fill="url(#smallGrid)"
-                        />
-
-                        <path
-                            d="M 50 0 L 0 0 0 50"
-                            fill="none"
-                            stroke="#363a41"
-                            strokeWidth="1"
-                        />
-                    </pattern>
-                </defs>
-
-                {/* Фон рабочей области */}
-                <rect
-                    x="0"
-                    y="0"
-                    width="1000"
-                    height="700"
-                    fill="#15171a"
-                />
-
-                {/* Сетка */}
-                <rect
-                    x="0"
-                    y="0"
-                    width="1000"
-                    height="700"
-                    fill="url(#largeGrid)"
-                />
-
-                {/* Центральная ось X */}
-                <line
-                    x1="0"
-                    y1="350"
-                    x2="1000"
-                    y2="350"
-                    stroke="#41464e"
-                    strokeWidth="1"
-                />
-
-                {/* Центральная ось Y */}
-                <line
-                    x1="500"
-                    y1="0"
-                    x2="500"
-                    y2="700"
-                    stroke="#41464e"
-                    strokeWidth="1"
-                />
-
-                {/* Тестовая кожаная деталь 100 × 70 мм */}
-                <rect
-                    x="450"
-                    y="315"
-                    width="100"
-                    height="70"
-                    fill="#25282d"
-                    stroke="#b8bdc5"
-                    strokeWidth="1"
-                />
-
-                {/* Размер по горизонтали */}
-                <text
-                    x="500"
-                    y="405"
-                    textAnchor="middle"
-                    fill="#8e949d"
-                    fontSize="10"
-                >
-                    100 mm
-                </text>
-
-                {/* Размер по вертикали */}
-                <text
-                    x="565"
-                    y="350"
-                    textAnchor="middle"
-                    fill="#8e949d"
-                    fontSize="10"
-                    transform="rotate(90 565 350)"
-                >
-                    70 mm
-                </text>
-
-                {/* Подпись масштаба */}
-                <text
-                    x="20"
-                    y="30"
-                    fill="#666b73"
-                    fontSize="11"
-                >
-                    1 grid = 10 mm
-                </text>
-            </svg>
-
-            <div className="canvas-info">
-                <span>Canvas</span>
-                <span>{zoom}%</span>
+                <div className="canvas-info">
+                    <span>Canvas</span>
+                    <span>{Math.round(zoom)}%</span>
+                </div>
             </div>
         </div>
     );

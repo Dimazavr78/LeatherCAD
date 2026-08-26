@@ -6,6 +6,7 @@ import { CanvasView } from '../Canvas/CanvasView';
 import { PropertiesPanel } from '../Properties/PropertiesPanel';
 import {
     calculateZoomPercent,
+    getGridSpacing,
     getViewBoxCenter,
     INITIAL_VIEWBOX,
     zoomViewBoxAtPoint,
@@ -16,9 +17,11 @@ import {
 export function AppShell() {
     const [viewBox, setViewBox] = useState<ViewBox>(INITIAL_VIEWBOX);
     const [cursorPosition, setCursorPosition] = useState<Point | null>(null);
+    const [snapEnabled, setSnapEnabled] = useState(true);
     const [leftCollapsed, setLeftCollapsed] = useState(false);
     const [rightCollapsed, setRightCollapsed] = useState(false);
     const zoom = Math.round(calculateZoomPercent(viewBox));
+    const gridSpacing = getGridSpacing(zoom);
 
     const setZoomAroundCenter = (requestedZoom: number) => {
         setViewBox((currentViewBox) =>
@@ -95,6 +98,9 @@ export function AppShell() {
             <BottomBar
                 zoom={zoom}
                 cursorPosition={cursorPosition}
+                gridSpacing={gridSpacing.minor}
+                snapEnabled={snapEnabled}
+                onSnapToggle={() => setSnapEnabled((enabled) => !enabled)}
                 onZoomIn={zoomIn}
                 onZoomOut={zoomOut}
                 onResetZoom={resetZoom}
