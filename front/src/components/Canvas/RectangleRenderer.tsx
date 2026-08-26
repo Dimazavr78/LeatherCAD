@@ -6,6 +6,10 @@ interface RectangleRendererProps {
     activeTool: Tool;
     selected: boolean;
     onSelect: (id: string) => void;
+    onMoveStart: (
+        event: PointerEvent<SVGRectElement>,
+        rectangle: RectangleObject,
+    ) => void;
 }
 
 export function RectangleRenderer({
@@ -13,6 +17,7 @@ export function RectangleRenderer({
     activeTool,
     selected,
     onSelect,
+    onMoveStart,
 }: RectangleRendererProps) {
     const handlePointerDown = (event: PointerEvent<SVGRectElement>) => {
         const isSelectionClick =
@@ -24,6 +29,7 @@ export function RectangleRenderer({
 
         event.stopPropagation();
         onSelect(rectangle.id);
+        onMoveStart(event, rectangle);
     };
 
     return (

@@ -12,3 +12,5 @@ export interface RectangleObject {
 export type CadObject = RectangleObject;
 
 export type Tool = 'select' | 'rectangle';
+
+export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';

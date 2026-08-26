@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { TopBar } from './TopBar';
 import { BottomBar } from './BottomBar';
 import { LeftToolbar } from '../Toolbar/LeftToolbar';
@@ -29,40 +29,12 @@ export function AppShell() {
     const selectedObject =
         objects.find((object) => object.id === selectedObjectId) ?? null;
 
-    useEffect(() => {
-        const handleKeyDown = (event: KeyboardEvent) => {
-            const target = event.target;
-            const isEditing =
-                target instanceof HTMLElement &&
-                (target.tagName === 'INPUT' ||
-                    target.tagName === 'TEXTAREA' ||
-                    target.isContentEditable);
-
-            if (
-                !isEditing &&
-                selectedObjectId &&
-                (event.key === 'Delete' || event.key === 'Backspace')
-            ) {
-                event.preventDefault();
-                setObjects((currentObjects) =>
-                    currentObjects.filter((object) => object.id !== selectedObjectId),
-                );
-                setSelectedObjectId(null);
-            } else if (event.key === 'Escape') {
-                setSelectedObjectId(null);
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedObjectId]);
-
     const addObject = (object: RectangleObject) => {
         setObjects((currentObjects) => [...currentObjects, object]);
         setSelectedObjectId(object.id);
     };
 
-    const updateObject = (
+    const updateObject = useCallback((
         id: string,
         patch: Partial<Omit<RectangleObject, 'id' | 'type'>>,
     ) => {
@@ -71,7 +43,22 @@ export function AppShell() {
                 object.id === id ? { ...object, ...patch } : object,
             ),
         );
-    };
+    }, []);
+
+    const replaceObject = useCallback((updatedObject: RectangleObject) => {
+        setObjects((currentObjects) =>
+            currentObjects.map((object) =>
+                object.id === updatedObject.id ? updatedObject : object,
+            ),
+        );
+    }, []);
+
+    const deleteObject = useCallback((id: string) => {
+        setObjects((currentObjects) =>
+            currentObjects.filter((object) => object.id !== id),
+        );
+        setSelectedObjectId(null);
+    }, []);
 
     const setZoomAroundCenter = (requestedZoom: number) => {
         setViewBox((currentViewBox) =>
@@ -136,6 +123,8 @@ export function AppShell() {
                         onViewBoxChange={setViewBox}
                         onCursorPositionChange={setCursorPosition}
                         onObjectCreate={addObject}
+                        onObjectUpdate={replaceObject}
+                        onObjectDelete={deleteObject}
                         onSelectionChange={setSelectedObjectId}
                     />
                 </main>

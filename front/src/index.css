@@ -393,6 +393,52 @@ button {
     pointer-events: none;
 }
 
+.selection-outline {
+    fill: none;
+    stroke: #c3c8cf;
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+    pointer-events: none;
+}
+
+.selection-handle {
+    fill: #d0d4da;
+    stroke: #555c65;
+    stroke-width: 1;
+}
+
+.selection-handle--nw,
+.selection-handle--se {
+    cursor: nwse-resize;
+}
+
+.selection-handle--ne,
+.selection-handle--sw {
+    cursor: nesw-resize;
+}
+
+.selection-handle--n,
+.selection-handle--s {
+    cursor: ns-resize;
+}
+
+.selection-handle--e,
+.selection-handle--w {
+    cursor: ew-resize;
+}
+
+.selection-dimensions rect {
+    fill: #25292e;
+    stroke: #4b515a;
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+}
+
+.selection-dimensions text {
+    fill: #d1d5da;
+    font-family: "JetBrains Mono", Consolas, monospace;
+}
+
 /* ---------------------------------- */
 /* PROPERTIES                          */
 /* ---------------------------------- */

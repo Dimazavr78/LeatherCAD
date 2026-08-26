@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { HorizontalRuler } from './HorizontalRuler';
 import { RectangleRenderer } from './RectangleRenderer';
+import { SelectionOverlay } from './SelectionOverlay';
 import { VerticalRuler } from './VerticalRuler';
 import {
     calculateZoomPercent,
@@ -18,7 +19,13 @@ import {
     type Point,
     type ViewBox,
 } from './canvasMath';
-import type { CadObject, RectangleObject, Tool } from '../../types/cad';
+import { moveRectangle, resizeRectangle } from './rectangleMath';
+import type {
+    CadObject,
+    RectangleObject,
+    ResizeHandle,
+    Tool,
+} from '../../types/cad';
 
 interface CanvasViewProps {
     viewBox: ViewBox;
@@ -30,6 +37,8 @@ interface CanvasViewProps {
     onViewBoxChange: (update: (viewBox: ViewBox) => ViewBox) => void;
     onCursorPositionChange: (position: Point | null) => void;
     onObjectCreate: (object: RectangleObject) => void;
+    onObjectUpdate: (object: RectangleObject) => void;
+    onObjectDelete: (id: string) => void;
     onSelectionChange: (id: string | null) => void;
 }
 
@@ -48,6 +57,24 @@ interface RectangleDraft {
     start: Point;
     current: Point;
 }
+
+type InteractionState =
+    | { type: 'idle' }
+    | {
+          type: 'move';
+          objectId: string;
+          pointerId: number;
+          startPointer: Point;
+          startObject: RectangleObject;
+      }
+    | {
+          type: 'resize';
+          objectId: string;
+          pointerId: number;
+          handle: ResizeHandle;
+          startPointer: Point;
+          startObject: RectangleObject;
+      };
 
 const MIN_RECTANGLE_SIZE = 1;
 
@@ -70,6 +97,8 @@ export function CanvasView({
     onViewBoxChange,
     onCursorPositionChange,
     onObjectCreate,
+    onObjectUpdate,
+    onObjectDelete,
     onSelectionChange,
 }: CanvasViewProps) {
     const stageRef = useRef<HTMLDivElement>(null);
@@ -77,6 +106,7 @@ export function CanvasView({
     const panStateRef = useRef<PanState | null>(null);
     const [isPanning, setIsPanning] = useState(false);
     const [rectangleDraft, setRectangleDraft] = useState<RectangleDraft | null>(null);
+    const [interaction, setInteraction] = useState<InteractionState>({ type: 'idle' });
     const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 1, height: 1 });
     const zoom = calculateZoomPercent(viewBox);
     const gridSpacing = getGridSpacing(zoom);
@@ -84,6 +114,9 @@ export function CanvasView({
     const gridY = viewBox.y - viewBox.height;
     const gridWidth = viewBox.width * 3;
     const gridHeight = viewBox.height * 3;
+    const selectedObject =
+        objects.find((object) => object.id === selectedObjectId) ?? null;
+    const screenUnit = viewBox.width / Math.max(canvasSize.width, 1);
 
     useEffect(() => {
         const stage = stageRef.current;
@@ -127,23 +160,64 @@ export function CanvasView({
     }, [onViewBoxChange]);
 
     useEffect(() => {
-        const cancelDraft = (event: KeyboardEvent) => {
-            if (event.key !== 'Escape' || !rectangleDraft) {
+        const releaseCapture = (pointerId: number) => {
+            const svg = svgRef.current;
+
+            if (svg?.hasPointerCapture(pointerId)) {
+                svg.releasePointerCapture(pointerId);
+            }
+        };
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            const target = event.target;
+            const isEditing =
+                target instanceof HTMLElement &&
+                (target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.isContentEditable);
+
+            if (event.key === 'Escape') {
+                if (rectangleDraft) {
+                    releaseCapture(rectangleDraft.pointerId);
+                    setRectangleDraft(null);
+                } else if (interaction.type !== 'idle') {
+                    releaseCapture(interaction.pointerId);
+                    onObjectUpdate(interaction.startObject);
+                    setInteraction({ type: 'idle' });
+                } else {
+                    onSelectionChange(null);
+                }
+
                 return;
             }
 
-            const svg = svgRef.current;
+            if (
+                !isEditing &&
+                selectedObjectId &&
+                (event.key === 'Delete' || event.key === 'Backspace')
+            ) {
+                event.preventDefault();
 
-            if (svg?.hasPointerCapture(rectangleDraft.pointerId)) {
-                svg.releasePointerCapture(rectangleDraft.pointerId);
+                if (interaction.type !== 'idle') {
+                    releaseCapture(interaction.pointerId);
+                    onObjectUpdate(interaction.startObject);
+                    setInteraction({ type: 'idle' });
+                } else {
+                    onObjectDelete(selectedObjectId);
+                }
             }
-
-            setRectangleDraft(null);
         };
 
-        window.addEventListener('keydown', cancelDraft);
-        return () => window.removeEventListener('keydown', cancelDraft);
-    }, [rectangleDraft]);
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [
+        interaction,
+        onObjectDelete,
+        onObjectUpdate,
+        onSelectionChange,
+        rectangleDraft,
+        selectedObjectId,
+    ]);
 
     const getCanvasPoint = (clientX: number, clientY: number) => {
         const svg = svgRef.current;
@@ -164,6 +238,56 @@ export function CanvasView({
                   y: snapToGrid(point.y, snapSpacing),
               }
             : point;
+
+    const startMove = (
+        event: PointerEvent<SVGRectElement>,
+        rectangle: RectangleObject,
+    ) => {
+        const point = getCanvasPoint(event.clientX, event.clientY);
+        const svg = svgRef.current;
+
+        if (!point || !svg) {
+            return;
+        }
+
+        event.preventDefault();
+        svg.setPointerCapture(event.pointerId);
+        setInteraction({
+            type: 'move',
+            objectId: rectangle.id,
+            pointerId: event.pointerId,
+            startPointer: point,
+            startObject: { ...rectangle },
+        });
+    };
+
+    const startResize = (
+        event: PointerEvent<SVGRectElement>,
+        handle: ResizeHandle,
+    ) => {
+        if (event.button !== 0 || !selectedObject) {
+            return;
+        }
+
+        const point = getCanvasPoint(event.clientX, event.clientY);
+        const svg = svgRef.current;
+
+        if (!point || !svg) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        svg.setPointerCapture(event.pointerId);
+        setInteraction({
+            type: 'resize',
+            objectId: selectedObject.id,
+            pointerId: event.pointerId,
+            handle,
+            startPointer: point,
+            startObject: { ...selectedObject },
+        });
+    };
 
     const handleWheel = (event: WheelEvent<SVGSVGElement>) => {
         event.preventDefault();
@@ -237,6 +361,32 @@ export function CanvasView({
             }
         }
 
+        if (interaction.type !== 'idle' && interaction.pointerId === event.pointerId) {
+            const point = getCanvasPoint(event.clientX, event.clientY);
+
+            if (point) {
+                const options = { snapEnabled, snapSpacing };
+                const updatedObject =
+                    interaction.type === 'move'
+                        ? moveRectangle(
+                              interaction.startObject,
+                              interaction.startPointer,
+                              point,
+                              options,
+                          )
+                        : resizeRectangle(
+                              interaction.startObject,
+                              interaction.handle,
+                              point,
+                              {
+                                  ...options,
+                                  preserveAspectRatio: event.shiftKey,
+                              },
+                          );
+                onObjectUpdate(updatedObject);
+            }
+        }
+
         if (panState?.pointerId === event.pointerId) {
             const previousPoint = getCanvasPoint(
                 panState.clientPosition.x,
@@ -273,6 +423,15 @@ export function CanvasView({
     };
 
     const handlePointerUp = (event: PointerEvent<SVGSVGElement>) => {
+        if (interaction.type !== 'idle' && interaction.pointerId === event.pointerId) {
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+            }
+
+            setInteraction({ type: 'idle' });
+            return;
+        }
+
         if (rectangleDraft?.pointerId === event.pointerId) {
             const pointerPosition = getCanvasPoint(event.clientX, event.clientY);
             const endPoint = pointerPosition
@@ -300,6 +459,17 @@ export function CanvasView({
 
             setRectangleDraft(null);
             return;
+        }
+
+        stopPanning(event);
+    };
+
+    const handlePointerCancel = (event: PointerEvent<SVGSVGElement>) => {
+        setRectangleDraft(null);
+
+        if (interaction.type !== 'idle' && interaction.pointerId === event.pointerId) {
+            onObjectUpdate(interaction.startObject);
+            setInteraction({ type: 'idle' });
         }
 
         stopPanning(event);
@@ -335,10 +505,7 @@ export function CanvasView({
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
-                    onPointerCancel={(event) => {
-                        setRectangleDraft(null);
-                        stopPanning(event);
-                    }}
+                    onPointerCancel={handlePointerCancel}
                     onPointerLeave={() => {
                         if (!panStateRef.current) {
                             onCursorPositionChange(null);
@@ -413,8 +580,18 @@ export function CanvasView({
                             activeTool={activeTool}
                             selected={object.id === selectedObjectId}
                             onSelect={onSelectionChange}
+                            onMoveStart={startMove}
                         />
                     ))}
+
+                    {activeTool === 'select' && selectedObject && (
+                        <SelectionOverlay
+                            rectangle={selectedObject}
+                            screenUnit={screenUnit}
+                            showDimensions={interaction.type === 'resize'}
+                            onResizeStart={startResize}
+                        />
+                    )}
 
                     {draftGeometry && (
                         <rect
