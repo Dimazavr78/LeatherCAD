@@ -1,5 +1,8 @@
+import type { Point } from '../Canvas/canvasMath';
+
 interface BottomBarProps {
     zoom: number;
+    cursorPosition: Point | null;
     onZoomIn: () => void;
     onZoomOut: () => void;
     onResetZoom: () => void;
@@ -8,6 +11,7 @@ interface BottomBarProps {
 
 export function BottomBar({
                               zoom,
+                              cursorPosition,
                               onZoomIn,
                               onZoomOut,
                               onResetZoom,
@@ -16,8 +20,12 @@ export function BottomBar({
     return (
         <footer className="bottom-bar">
             <div className="coordinates">
-                <span>X: 0.00 mm</span>
-                <span>Y: 0.00 mm</span>
+                <span>
+                    X: {cursorPosition ? `${cursorPosition.x.toFixed(2)} mm` : '—'}
+                </span>
+                <span>
+                    Y: {cursorPosition ? `${cursorPosition.y.toFixed(2)} mm` : '—'}
+                </span>
             </div>
 
             <div className="zoom-controls">

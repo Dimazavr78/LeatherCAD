@@ -297,7 +297,13 @@ button {
 
     display: block;
 
+    cursor: crosshair;
     transform-origin: center center;
+    user-select: none;
+}
+
+.canvas-svg--panning {
+    cursor: grabbing;
 }
 
 /* ---------------------------------- */

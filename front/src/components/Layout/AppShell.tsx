@@ -4,28 +4,46 @@ import { BottomBar } from './BottomBar';
 import { LeftToolbar } from '../Toolbar/LeftToolbar';
 import { CanvasView } from '../Canvas/CanvasView';
 import { PropertiesPanel } from '../Properties/PropertiesPanel';
+import {
+    calculateZoomPercent,
+    getViewBoxCenter,
+    INITIAL_VIEWBOX,
+    zoomViewBoxAtPoint,
+    type Point,
+    type ViewBox,
+} from '../Canvas/canvasMath';
 
 export function AppShell() {
-    const [zoom, setZoom] = useState(100);
+    const [viewBox, setViewBox] = useState<ViewBox>(INITIAL_VIEWBOX);
+    const [cursorPosition, setCursorPosition] = useState<Point | null>(null);
     const [leftCollapsed, setLeftCollapsed] = useState(false);
     const [rightCollapsed, setRightCollapsed] = useState(false);
+    const zoom = Math.round(calculateZoomPercent(viewBox));
+
+    const setZoomAroundCenter = (requestedZoom: number) => {
+        setViewBox((currentViewBox) =>
+            zoomViewBoxAtPoint(
+                currentViewBox,
+                getViewBoxCenter(currentViewBox),
+                requestedZoom,
+            ),
+        );
+    };
 
     const zoomIn = () => {
-        setZoom((value) => Math.min(value + 10, 400));
+        setZoomAroundCenter(zoom + 10);
     };
 
     const zoomOut = () => {
-        setZoom((value) => Math.max(value - 10, 10));
+        setZoomAroundCenter(zoom - 10);
     };
 
     const resetZoom = () => {
-        setZoom(100);
+        setZoomAroundCenter(100);
     };
 
     const fitCanvas = () => {
-        // Пока просто возвращаем масштаб к 100%.
-        // Позже здесь будет настоящий Fit to Content.
-        setZoom(100);
+        setViewBox(INITIAL_VIEWBOX);
     };
 
     return (
@@ -50,7 +68,11 @@ export function AppShell() {
                 </aside>
 
                 <main className="canvas-area">
-                    <CanvasView zoom={zoom} />
+                    <CanvasView
+                        viewBox={viewBox}
+                        onViewBoxChange={setViewBox}
+                        onCursorPositionChange={setCursorPosition}
+                    />
                 </main>
 
                 <aside
@@ -72,6 +94,7 @@ export function AppShell() {
 
             <BottomBar
                 zoom={zoom}
+                cursorPosition={cursorPosition}
                 onZoomIn={zoomIn}
                 onZoomOut={zoomOut}
                 onResetZoom={resetZoom}

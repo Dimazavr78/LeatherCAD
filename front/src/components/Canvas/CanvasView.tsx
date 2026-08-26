@@ -1,17 +1,141 @@
+import { useRef, useState, type PointerEvent, type WheelEvent } from 'react';
+import {
+    calculateZoomPercent,
+    panViewBox,
+    screenToCanvasCoordinates,
+    zoomViewBoxAtPoint,
+    type Point,
+    type ViewBox,
+} from './canvasMath';
+
 interface CanvasViewProps {
-    zoom: number;
+    viewBox: ViewBox;
+    onViewBoxChange: (update: (viewBox: ViewBox) => ViewBox) => void;
+    onCursorPositionChange: (position: Point | null) => void;
 }
 
-export function CanvasView({ zoom }: CanvasViewProps) {
+interface PanState {
+    pointerId: number;
+    clientPosition: Point;
+}
+
+export function CanvasView({
+    viewBox,
+    onViewBoxChange,
+    onCursorPositionChange,
+}: CanvasViewProps) {
+    const svgRef = useRef<SVGSVGElement>(null);
+    const panStateRef = useRef<PanState | null>(null);
+    const [isPanning, setIsPanning] = useState(false);
+    const zoom = Math.round(calculateZoomPercent(viewBox));
+
+    const getCanvasPoint = (clientX: number, clientY: number) => {
+        const svg = svgRef.current;
+
+        return svg
+            ? screenToCanvasCoordinates(svg, { x: clientX, y: clientY })
+            : null;
+    };
+
+    const updateCursorPosition = (clientX: number, clientY: number) => {
+        onCursorPositionChange(getCanvasPoint(clientX, clientY));
+    };
+
+    const handleWheel = (event: WheelEvent<SVGSVGElement>) => {
+        event.preventDefault();
+
+        const point = getCanvasPoint(event.clientX, event.clientY);
+
+        if (!point) {
+            return;
+        }
+
+        const zoomFactor = event.deltaY < 0 ? 1.1 : 1 / 1.1;
+        onViewBoxChange((currentViewBox) =>
+            zoomViewBoxAtPoint(
+                currentViewBox,
+                point,
+                calculateZoomPercent(currentViewBox) * zoomFactor,
+            ),
+        );
+        onCursorPositionChange(point);
+    };
+
+    const handlePointerDown = (event: PointerEvent<SVGSVGElement>) => {
+        const shouldPan =
+            event.button === 1 || (event.button === 0 && event.shiftKey);
+
+        if (!shouldPan) {
+            return;
+        }
+
+        event.preventDefault();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        panStateRef.current = {
+            pointerId: event.pointerId,
+            clientPosition: { x: event.clientX, y: event.clientY },
+        };
+        setIsPanning(true);
+    };
+
+    const handlePointerMove = (event: PointerEvent<SVGSVGElement>) => {
+        const panState = panStateRef.current;
+
+        if (panState?.pointerId === event.pointerId) {
+            const previousPoint = getCanvasPoint(
+                panState.clientPosition.x,
+                panState.clientPosition.y,
+            );
+            const currentPoint = getCanvasPoint(event.clientX, event.clientY);
+
+            if (previousPoint && currentPoint) {
+                onViewBoxChange((currentViewBox) =>
+                    panViewBox(currentViewBox, {
+                        x: currentPoint.x - previousPoint.x,
+                        y: currentPoint.y - previousPoint.y,
+                    }),
+                );
+            }
+
+            panState.clientPosition = { x: event.clientX, y: event.clientY };
+        }
+
+        updateCursorPosition(event.clientX, event.clientY);
+    };
+
+    const stopPanning = (event: PointerEvent<SVGSVGElement>) => {
+        if (panStateRef.current?.pointerId !== event.pointerId) {
+            return;
+        }
+
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+
+        panStateRef.current = null;
+        setIsPanning(false);
+    };
+
     return (
         <div className="canvas-view">
             <svg
-                className="canvas-svg"
-                style={{
-                    transform: `scale(${zoom / 100})`,
-                }}
-                viewBox="0 0 1000 700"
+                ref={svgRef}
+                className={`canvas-svg ${
+                    isPanning ? 'canvas-svg--panning' : ''
+                }`}
+                viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
                 preserveAspectRatio="xMidYMid meet"
+                onWheel={handleWheel}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={stopPanning}
+                onPointerCancel={stopPanning}
+                onPointerLeave={() => {
+                    if (!panStateRef.current) {
+                        onCursorPositionChange(null);
+                    }
+                }}
+                onContextMenu={(event) => event.preventDefault()}
             >
                 <defs>
                     {/* Мелкая сетка — 10 мм */}
