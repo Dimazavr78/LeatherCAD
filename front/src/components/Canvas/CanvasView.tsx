@@ -6,21 +6,31 @@ import {
     type WheelEvent,
 } from 'react';
 import { HorizontalRuler } from './HorizontalRuler';
+import { RectangleRenderer } from './RectangleRenderer';
 import { VerticalRuler } from './VerticalRuler';
 import {
     calculateZoomPercent,
     getGridSpacing,
     panViewBox,
     screenToCanvasCoordinates,
+    snapToGrid,
     zoomViewBoxAtPoint,
     type Point,
     type ViewBox,
 } from './canvasMath';
+import type { CadObject, RectangleObject, Tool } from '../../types/cad';
 
 interface CanvasViewProps {
     viewBox: ViewBox;
+    objects: CadObject[];
+    activeTool: Tool;
+    selectedObjectId: string | null;
+    snapEnabled: boolean;
+    snapSpacing: number;
     onViewBoxChange: (update: (viewBox: ViewBox) => ViewBox) => void;
     onCursorPositionChange: (position: Point | null) => void;
+    onObjectCreate: (object: RectangleObject) => void;
+    onSelectionChange: (id: string | null) => void;
 }
 
 interface PanState {
@@ -33,15 +43,40 @@ interface CanvasSize {
     height: number;
 }
 
+interface RectangleDraft {
+    pointerId: number;
+    start: Point;
+    current: Point;
+}
+
+const MIN_RECTANGLE_SIZE = 1;
+
+function normalizeRectangle(start: Point, current: Point) {
+    return {
+        x: Math.min(start.x, current.x),
+        y: Math.min(start.y, current.y),
+        width: Math.abs(current.x - start.x),
+        height: Math.abs(current.y - start.y),
+    };
+}
+
 export function CanvasView({
     viewBox,
+    objects,
+    activeTool,
+    selectedObjectId,
+    snapEnabled,
+    snapSpacing,
     onViewBoxChange,
     onCursorPositionChange,
+    onObjectCreate,
+    onSelectionChange,
 }: CanvasViewProps) {
     const stageRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
     const panStateRef = useRef<PanState | null>(null);
     const [isPanning, setIsPanning] = useState(false);
+    const [rectangleDraft, setRectangleDraft] = useState<RectangleDraft | null>(null);
     const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 1, height: 1 });
     const zoom = calculateZoomPercent(viewBox);
     const gridSpacing = getGridSpacing(zoom);
@@ -91,6 +126,25 @@ export function CanvasView({
         return () => resizeObserver.disconnect();
     }, [onViewBoxChange]);
 
+    useEffect(() => {
+        const cancelDraft = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape' || !rectangleDraft) {
+                return;
+            }
+
+            const svg = svgRef.current;
+
+            if (svg?.hasPointerCapture(rectangleDraft.pointerId)) {
+                svg.releasePointerCapture(rectangleDraft.pointerId);
+            }
+
+            setRectangleDraft(null);
+        };
+
+        window.addEventListener('keydown', cancelDraft);
+        return () => window.removeEventListener('keydown', cancelDraft);
+    }, [rectangleDraft]);
+
     const getCanvasPoint = (clientX: number, clientY: number) => {
         const svg = svgRef.current;
 
@@ -102,6 +156,14 @@ export function CanvasView({
     const updateCursorPosition = (clientX: number, clientY: number) => {
         onCursorPositionChange(getCanvasPoint(clientX, clientY));
     };
+
+    const applySnap = (point: Point): Point =>
+        snapEnabled
+            ? {
+                  x: snapToGrid(point.x, snapSpacing),
+                  y: snapToGrid(point.y, snapSpacing),
+              }
+            : point;
 
     const handleWheel = (event: WheelEvent<SVGSVGElement>) => {
         event.preventDefault();
@@ -126,21 +188,54 @@ export function CanvasView({
         const shouldPan =
             event.button === 1 || (event.button === 0 && event.shiftKey);
 
-        if (!shouldPan) {
+        if (shouldPan) {
+            event.preventDefault();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            panStateRef.current = {
+                pointerId: event.pointerId,
+                clientPosition: { x: event.clientX, y: event.clientY },
+            };
+            setIsPanning(true);
             return;
         }
 
-        event.preventDefault();
-        event.currentTarget.setPointerCapture(event.pointerId);
-        panStateRef.current = {
-            pointerId: event.pointerId,
-            clientPosition: { x: event.clientX, y: event.clientY },
-        };
-        setIsPanning(true);
+        if (event.button !== 0) {
+            return;
+        }
+
+        if (activeTool === 'rectangle') {
+            const point = getCanvasPoint(event.clientX, event.clientY);
+
+            if (!point) {
+                return;
+            }
+
+            event.preventDefault();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            const snappedPoint = applySnap(point);
+            setRectangleDraft({
+                pointerId: event.pointerId,
+                start: snappedPoint,
+                current: snappedPoint,
+            });
+        } else {
+            onSelectionChange(null);
+        }
     };
 
     const handlePointerMove = (event: PointerEvent<SVGSVGElement>) => {
         const panState = panStateRef.current;
+
+        if (rectangleDraft?.pointerId === event.pointerId) {
+            const point = getCanvasPoint(event.clientX, event.clientY);
+
+            if (point) {
+                setRectangleDraft({
+                    ...rectangleDraft,
+                    current: applySnap(point),
+                });
+            }
+        }
 
         if (panState?.pointerId === event.pointerId) {
             const previousPoint = getCanvasPoint(
@@ -177,6 +272,43 @@ export function CanvasView({
         setIsPanning(false);
     };
 
+    const handlePointerUp = (event: PointerEvent<SVGSVGElement>) => {
+        if (rectangleDraft?.pointerId === event.pointerId) {
+            const pointerPosition = getCanvasPoint(event.clientX, event.clientY);
+            const endPoint = pointerPosition
+                ? applySnap(pointerPosition)
+                : rectangleDraft.current;
+            const geometry = normalizeRectangle(
+                rectangleDraft.start,
+                endPoint,
+            );
+
+            if (
+                geometry.width >= MIN_RECTANGLE_SIZE &&
+                geometry.height >= MIN_RECTANGLE_SIZE
+            ) {
+                onObjectCreate({
+                    id: crypto.randomUUID(),
+                    type: 'rectangle',
+                    ...geometry,
+                });
+            }
+
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+            }
+
+            setRectangleDraft(null);
+            return;
+        }
+
+        stopPanning(event);
+    };
+
+    const draftGeometry = rectangleDraft
+        ? normalizeRectangle(rectangleDraft.start, rectangleDraft.current)
+        : null;
+
     return (
         <div className="canvas-view">
             <div className="canvas-ruler-corner" aria-hidden="true" />
@@ -194,14 +326,19 @@ export function CanvasView({
             <div ref={stageRef} className="canvas-stage">
                 <svg
                     ref={svgRef}
-                    className={`canvas-svg ${isPanning ? 'canvas-svg--panning' : ''}`}
+                    className={`canvas-svg canvas-svg--${activeTool} ${
+                        isPanning ? 'canvas-svg--panning' : ''
+                    }`}
                     viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`}
                     preserveAspectRatio="none"
                     onWheel={handleWheel}
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
-                    onPointerUp={stopPanning}
-                    onPointerCancel={stopPanning}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={(event) => {
+                        setRectangleDraft(null);
+                        stopPanning(event);
+                    }}
                     onPointerLeave={() => {
                         if (!panStateRef.current) {
                             onCursorPositionChange(null);
@@ -269,33 +406,29 @@ export function CanvasView({
                     />
                     <circle cx="0" cy="0" r="3" className="canvas-origin-mark" />
 
-                    <rect
-                        x="-50"
-                        y="-35"
-                        width="100"
-                        height="70"
-                        fill="#25282d"
-                        stroke="#b8bdc5"
-                        strokeWidth="1"
-                        vectorEffect="non-scaling-stroke"
-                    />
-                    <text x="0" y="55" textAnchor="middle" className="canvas-dimension-label">
-                        100 mm
-                    </text>
-                    <text
-                        x="65"
-                        y="0"
-                        textAnchor="middle"
-                        transform="rotate(90 65 0)"
-                        className="canvas-dimension-label"
-                    >
-                        70 mm
-                    </text>
+                    {objects.map((object) => (
+                        <RectangleRenderer
+                            key={object.id}
+                            rectangle={object}
+                            activeTool={activeTool}
+                            selected={object.id === selectedObjectId}
+                            onSelect={onSelectionChange}
+                        />
+                    ))}
+
+                    {draftGeometry && (
+                        <rect
+                            className="cad-rectangle-draft"
+                            {...draftGeometry}
+                            vectorEffect="non-scaling-stroke"
+                        />
+                    )}
                 </svg>
 
                 <div className="canvas-info">
                     <span>Canvas</span>
                     <span>{Math.round(zoom)}%</span>
+                    <span>Objects: {objects.length}</span>
                 </div>
             </div>
         </div>

@@ -246,9 +246,14 @@ button {
     color: #f1f1f1;
 }
 
-.tool-button:first-child {
+.tool-button--active {
     background: #30343a;
     color: #f1f1f1;
+}
+
+.tool-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 .tool-icon {
@@ -306,8 +311,15 @@ button {
 
     display: block;
 
-    cursor: crosshair;
     user-select: none;
+}
+
+.canvas-svg--select {
+    cursor: default;
+}
+
+.canvas-svg--rectangle {
+    cursor: crosshair;
 }
 
 .canvas-svg--panning {
@@ -361,10 +373,24 @@ button {
     fill: #8e949d;
 }
 
-.canvas-dimension-label {
-    fill: #8e949d;
-    font-size: 10px;
-    user-select: none;
+.cad-rectangle {
+    fill: #25282d;
+    stroke: #9ba1aa;
+    stroke-width: 1;
+}
+
+.cad-rectangle--selected {
+    fill: #292d32;
+    stroke: #d2d6dc;
+    stroke-width: 1.5;
+}
+
+.cad-rectangle-draft {
+    fill: rgba(142, 148, 157, 0.12);
+    stroke: #b8bdc5;
+    stroke-width: 1;
+    stroke-dasharray: 5 4;
+    pointer-events: none;
 }
 
 /* ---------------------------------- */
@@ -500,6 +526,71 @@ button {
 
     font-family: "JetBrains Mono", Consolas, monospace;
     font-size: 11px;
+}
+
+.properties-form {
+    padding: 16px;
+}
+
+.properties-object-type {
+    margin-bottom: 20px;
+    color: #c3c7cd;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.property-group {
+    margin-bottom: 22px;
+}
+
+.property-group-title {
+    margin-bottom: 9px;
+    color: #707680;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.property-field {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: #9da2aa;
+    font-size: 11px;
+}
+
+.property-input-wrap {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    border: 1px solid #34383e;
+    border-radius: 4px;
+    background: #17191c;
+}
+
+.property-input-wrap:focus-within {
+    border-color: #666d77;
+}
+
+.property-input-wrap input {
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0 7px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #d1d4d8;
+    font: inherit;
+}
+
+.property-input-wrap span {
+    padding-right: 7px;
+    color: #626872;
+    font-size: 10px;
 }
 
 .snap-toggle {

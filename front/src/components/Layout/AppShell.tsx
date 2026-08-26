@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TopBar } from './TopBar';
 import { BottomBar } from './BottomBar';
 import { LeftToolbar } from '../Toolbar/LeftToolbar';
@@ -13,8 +13,12 @@ import {
     type Point,
     type ViewBox,
 } from '../Canvas/canvasMath';
+import type { CadObject, RectangleObject, Tool } from '../../types/cad';
 
 export function AppShell() {
+    const [objects, setObjects] = useState<CadObject[]>([]);
+    const [activeTool, setActiveTool] = useState<Tool>('select');
+    const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
     const [viewBox, setViewBox] = useState<ViewBox>(INITIAL_VIEWBOX);
     const [cursorPosition, setCursorPosition] = useState<Point | null>(null);
     const [snapEnabled, setSnapEnabled] = useState(true);
@@ -22,6 +26,52 @@ export function AppShell() {
     const [rightCollapsed, setRightCollapsed] = useState(false);
     const zoom = Math.round(calculateZoomPercent(viewBox));
     const gridSpacing = getGridSpacing(zoom);
+    const selectedObject =
+        objects.find((object) => object.id === selectedObjectId) ?? null;
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            const target = event.target;
+            const isEditing =
+                target instanceof HTMLElement &&
+                (target.tagName === 'INPUT' ||
+                    target.tagName === 'TEXTAREA' ||
+                    target.isContentEditable);
+
+            if (
+                !isEditing &&
+                selectedObjectId &&
+                (event.key === 'Delete' || event.key === 'Backspace')
+            ) {
+                event.preventDefault();
+                setObjects((currentObjects) =>
+                    currentObjects.filter((object) => object.id !== selectedObjectId),
+                );
+                setSelectedObjectId(null);
+            } else if (event.key === 'Escape') {
+                setSelectedObjectId(null);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedObjectId]);
+
+    const addObject = (object: RectangleObject) => {
+        setObjects((currentObjects) => [...currentObjects, object]);
+        setSelectedObjectId(object.id);
+    };
+
+    const updateObject = (
+        id: string,
+        patch: Partial<Omit<RectangleObject, 'id' | 'type'>>,
+    ) => {
+        setObjects((currentObjects) =>
+            currentObjects.map((object) =>
+                object.id === id ? { ...object, ...patch } : object,
+            ),
+        );
+    };
 
     const setZoomAroundCenter = (requestedZoom: number) => {
         setViewBox((currentViewBox) =>
@@ -59,7 +109,12 @@ export function AppShell() {
                         leftCollapsed ? 'left-panel--collapsed' : ''
                     }`}
                 >
-                    {!leftCollapsed && <LeftToolbar />}
+                    {!leftCollapsed && (
+                        <LeftToolbar
+                            activeTool={activeTool}
+                            onToolChange={setActiveTool}
+                        />
+                    )}
 
                     <button
                         className="panel-collapse-button panel-collapse-button--left"
@@ -73,8 +128,15 @@ export function AppShell() {
                 <main className="canvas-area">
                     <CanvasView
                         viewBox={viewBox}
+                        objects={objects}
+                        activeTool={activeTool}
+                        selectedObjectId={selectedObjectId}
+                        snapEnabled={snapEnabled}
+                        snapSpacing={gridSpacing.minor}
                         onViewBoxChange={setViewBox}
                         onCursorPositionChange={setCursorPosition}
+                        onObjectCreate={addObject}
+                        onSelectionChange={setSelectedObjectId}
                     />
                 </main>
 
@@ -91,7 +153,12 @@ export function AppShell() {
                         {rightCollapsed ? '‹' : '›'}
                     </button>
 
-                    {!rightCollapsed && <PropertiesPanel />}
+                    {!rightCollapsed && (
+                        <PropertiesPanel
+                            selectedObject={selectedObject}
+                            onObjectChange={updateObject}
+                        />
+                    )}
                 </aside>
             </div>
 
