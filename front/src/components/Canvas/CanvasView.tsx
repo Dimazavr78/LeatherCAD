@@ -5,6 +5,7 @@ import {
     type PointerEvent,
     type WheelEvent,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { HorizontalRuler } from './HorizontalRuler';
 import { RectangleRenderer } from './RectangleRenderer';
 import { SelectionOverlay } from './SelectionOverlay';
@@ -101,6 +102,7 @@ export function CanvasView({
     onObjectDelete,
     onSelectionChange,
 }: CanvasViewProps) {
+    const { t } = useTranslation();
     const stageRef = useRef<HTMLDivElement>(null);
     const svgRef = useRef<SVGSVGElement>(null);
     const panStateRef = useRef<PanState | null>(null);
@@ -603,9 +605,11 @@ export function CanvasView({
                 </svg>
 
                 <div className="canvas-info">
-                    <span>Canvas</span>
+                    <span>{t('canvas.title')}</span>
                     <span>{Math.round(zoom)}%</span>
-                    <span>Objects: {objects.length}</span>
+                    <span>
+                        {t('canvas.objects')}: {objects.length}
+                    </span>
                 </div>
             </div>
         </div>

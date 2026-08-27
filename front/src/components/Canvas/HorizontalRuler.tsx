@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { getVisibleTicks, type ViewBox } from './canvasMath';
 
 interface HorizontalRulerProps {
@@ -11,6 +12,7 @@ export function HorizontalRuler({
     majorSpacing,
     width,
 }: HorizontalRulerProps) {
+    const { t } = useTranslation();
     const ticks = getVisibleTicks(
         viewBox.x,
         viewBox.x + viewBox.width,
@@ -22,7 +24,7 @@ export function HorizontalRuler({
             className="canvas-ruler-horizontal"
             viewBox={`0 0 ${Math.max(width, 1)} 24`}
             preserveAspectRatio="none"
-            aria-label="Horizontal ruler"
+            aria-label={t('ruler.horizontal')}
         >
             {ticks.map((tick) => {
                 const x = ((tick - viewBox.x) / viewBox.width) * width;

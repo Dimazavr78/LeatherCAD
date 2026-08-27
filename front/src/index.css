@@ -115,7 +115,7 @@ button {
 }
 
 .local-status {
-    margin-left: auto;
+    margin-left: 0;
     margin-right: 16px;
 
     display: flex;
@@ -124,6 +124,34 @@ button {
 
     color: #969ba4;
     font-size: 12px;
+}
+
+.language-control {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #969ba4;
+    font-size: 11px;
+}
+
+.language-control label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+}
+
+.language-control select {
+    height: 27px;
+    padding: 0 6px;
+    border: 1px solid #34383e;
+    border-radius: 4px;
+    outline: 0;
+    background: #1b1d21;
+    color: #b8bcc3;
+    cursor: pointer;
 }
 
 .status-dot {

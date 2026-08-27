@@ -1,4 +1,5 @@
 import type { PointerEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { RectangleObject, ResizeHandle } from '../../types/cad';
 
 const HANDLE_POSITIONS: Array<{
@@ -32,6 +33,7 @@ export function SelectionOverlay({
     showDimensions,
     onResizeStart,
 }: SelectionOverlayProps) {
+    const { t } = useTranslation();
     const handleSize = 8 * screenUnit;
     const tooltipWidth = 132 * screenUnit;
     const tooltipHeight = 22 * screenUnit;
@@ -82,7 +84,8 @@ export function SelectionOverlay({
                         textAnchor="middle"
                         fontSize={11 * screenUnit}
                     >
-                        {rectangle.width.toFixed(1)} × {rectangle.height.toFixed(1)} mm
+                        {rectangle.width.toFixed(1)} ×{' '}
+                        {rectangle.height.toFixed(1)} {t('common.mm')}
                     </text>
                 </g>
             )}

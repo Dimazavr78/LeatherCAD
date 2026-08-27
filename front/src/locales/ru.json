@@ -1,0 +1,37 @@
+{
+  "app": { "name": "LeatherCAD", "local": "Локально" },
+  "menu": {
+    "file": "Файл",
+    "edit": "Правка",
+    "view": "Вид",
+    "project": "Проект",
+    "help": "Помощь"
+  },
+  "toolbar": {
+    "sections": { "tools": "Инструменты", "leather": "Кожа" },
+    "select": { "label": "Выбор", "tooltip": "Выбор и редактирование объектов" },
+    "line": { "label": "Линия", "tooltip": "Создать линию" },
+    "rectangle": { "label": "Прямоугольник", "tooltip": "Создать прямоугольник" },
+    "circle": { "label": "Окружность", "tooltip": "Создать окружность" },
+    "arc": { "label": "Дуга", "tooltip": "Создать дугу" },
+    "part": { "label": "Деталь", "tooltip": "Деталь из кожи" },
+    "stitch": { "label": "Шов", "tooltip": "Линия шва" },
+    "holes": { "label": "Отверстия", "tooltip": "Отверстия" },
+    "hardware": { "label": "Фурнитура", "tooltip": "Фурнитура" },
+    "fold": { "label": "Сгиб", "tooltip": "Линия сгиба" }
+  },
+  "properties": {
+    "title": "Свойства",
+    "nothingSelected": "Ничего не выбрано",
+    "nothingSelectedDescription": "Выберите объект на рабочем поле, чтобы увидеть его свойства.",
+    "rectangle": { "title": "Прямоугольник" },
+    "sections": { "position": "Положение", "size": "Размер" },
+    "fields": { "x": "X", "y": "Y", "width": "Ширина", "height": "Высота" }
+  },
+  "canvas": { "title": "Холст", "grid": "Сетка", "snap": "Привязка", "objects": "Объекты" },
+  "zoom": { "fit": "Вписать", "in": "Увеличить", "out": "Уменьшить" },
+  "common": { "on": "ВКЛ", "off": "ВЫКЛ", "mm": "мм" },
+  "language": { "title": "Язык", "english": "English", "russian": "Русский" },
+  "panels": { "expand": "Развернуть", "collapse": "Свернуть" },
+  "ruler": { "horizontal": "Горизонтальная линейка", "vertical": "Вертикальная линейка" }
+}

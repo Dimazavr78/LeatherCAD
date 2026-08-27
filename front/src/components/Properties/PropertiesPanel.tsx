@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { RectangleObject } from '../../types/cad';
 
 interface PropertiesPanelProps {
@@ -12,10 +14,12 @@ export function PropertiesPanel({
     selectedObject,
     onObjectChange,
 }: PropertiesPanelProps) {
+    const { t } = useTranslation();
+
     return (
         <div className="properties-panel">
             <div className="properties-header">
-                <span>PROPERTIES</span>
+                <span>{t('properties.title').toUpperCase()}</span>
             </div>
 
             {selectedObject ? (
@@ -26,9 +30,11 @@ export function PropertiesPanel({
             ) : (
                 <div className="properties-empty">
                     <div className="properties-empty-icon">◇</div>
-                    <div className="properties-empty-title">Nothing selected</div>
+                    <div className="properties-empty-title">
+                        {t('properties.nothingSelected')}
+                    </div>
                     <div className="properties-empty-description">
-                        Select an object on the canvas to see its properties.
+                        {t('properties.nothingSelectedDescription')}
                     </div>
                 </div>
             )}
@@ -45,6 +51,7 @@ function RectangleProperties({
     rectangle,
     onObjectChange,
 }: RectanglePropertiesProps) {
+    const { t } = useTranslation();
     const updateNumber = (
         field: 'x' | 'y' | 'width' | 'height',
         value: string,
@@ -64,28 +71,30 @@ function RectangleProperties({
 
     return (
         <div className="properties-form">
-            <div className="properties-object-type">RECTANGLE</div>
-            <PropertyGroup title="POSITION">
+            <div className="properties-object-type">
+                {t('properties.rectangle.title').toUpperCase()}
+            </div>
+            <PropertyGroup title={t('properties.sections.position').toUpperCase()}>
                 <NumericProperty
-                    label="X"
+                    label={t('properties.fields.x')}
                     value={rectangle.x}
                     onChange={(value) => updateNumber('x', value)}
                 />
                 <NumericProperty
-                    label="Y"
+                    label={t('properties.fields.y')}
                     value={rectangle.y}
                     onChange={(value) => updateNumber('y', value)}
                 />
             </PropertyGroup>
-            <PropertyGroup title="SIZE">
+            <PropertyGroup title={t('properties.sections.size').toUpperCase()}>
                 <NumericProperty
-                    label="Width"
+                    label={t('properties.fields.width')}
                     value={rectangle.width}
                     min={0.1}
                     onChange={(value) => updateNumber('width', value)}
                 />
                 <NumericProperty
-                    label="Height"
+                    label={t('properties.fields.height')}
                     value={rectangle.height}
                     min={0.1}
                     onChange={(value) => updateNumber('height', value)}
@@ -100,7 +109,7 @@ function PropertyGroup({
     children,
 }: {
     title: string;
-    children: React.ReactNode;
+    children: ReactNode;
 }) {
     return (
         <section className="property-group">
@@ -118,6 +127,8 @@ interface NumericPropertyProps {
 }
 
 function NumericProperty({ label, value, min, onChange }: NumericPropertyProps) {
+    const { t } = useTranslation();
+
     return (
         <label className="property-field">
             <span>{label}</span>
@@ -129,7 +140,7 @@ function NumericProperty({ label, value, min, onChange }: NumericPropertyProps) 
                     step="any"
                     onChange={(event) => onChange(event.target.value)}
                 />
-                <span>mm</span>
+                <span>{t('common.mm')}</span>
             </div>
         </label>
     );

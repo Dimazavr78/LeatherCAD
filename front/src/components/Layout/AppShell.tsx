@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TopBar } from './TopBar';
 import { BottomBar } from './BottomBar';
 import { LeftToolbar } from '../Toolbar/LeftToolbar';
@@ -16,6 +17,7 @@ import {
 import type { CadObject, RectangleObject, Tool } from '../../types/cad';
 
 export function AppShell() {
+    const { t } = useTranslation();
     const [objects, setObjects] = useState<CadObject[]>([]);
     const [activeTool, setActiveTool] = useState<Tool>('select');
     const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
@@ -106,7 +108,11 @@ export function AppShell() {
                     <button
                         className="panel-collapse-button panel-collapse-button--left"
                         onClick={() => setLeftCollapsed((value) => !value)}
-                        title={leftCollapsed ? 'Развернуть' : 'Свернуть'}
+                        title={
+                            leftCollapsed
+                                ? t('panels.expand')
+                                : t('panels.collapse')
+                        }
                     >
                         {leftCollapsed ? '›' : '‹'}
                     </button>
@@ -137,7 +143,11 @@ export function AppShell() {
                     <button
                         className="panel-collapse-button panel-collapse-button--right"
                         onClick={() => setRightCollapsed((value) => !value)}
-                        title={rightCollapsed ? 'Развернуть' : 'Свернуть'}
+                        title={
+                            rightCollapsed
+                                ? t('panels.expand')
+                                : t('panels.collapse')
+                        }
                     >
                         {rightCollapsed ? '‹' : '›'}
                     </button>

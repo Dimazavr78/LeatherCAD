@@ -1,0 +1,12 @@
+[
+  { "id": "select", "icon": "↖", "category": "tools", "enabled": true, "localization": { "enabled": true, "label": "toolbar.select.label", "tooltip": "toolbar.select.tooltip" } },
+  { "id": "line", "icon": "╱", "category": "tools", "enabled": false, "localization": { "enabled": true, "label": "toolbar.line.label", "tooltip": "toolbar.line.tooltip" } },
+  { "id": "rectangle", "icon": "□", "category": "tools", "enabled": true, "localization": { "enabled": true, "label": "toolbar.rectangle.label", "tooltip": "toolbar.rectangle.tooltip" } },
+  { "id": "circle", "icon": "○", "category": "tools", "enabled": false, "localization": { "enabled": true, "label": "toolbar.circle.label", "tooltip": "toolbar.circle.tooltip" } },
+  { "id": "arc", "icon": "⌒", "category": "tools", "enabled": false, "localization": { "enabled": true, "label": "toolbar.arc.label", "tooltip": "toolbar.arc.tooltip" } },
+  { "id": "part", "icon": "◇", "category": "leather", "enabled": false, "localization": { "enabled": true, "label": "toolbar.part.label", "tooltip": "toolbar.part.tooltip" } },
+  { "id": "stitch", "icon": "⌁", "category": "leather", "enabled": false, "localization": { "enabled": true, "label": "toolbar.stitch.label", "tooltip": "toolbar.stitch.tooltip" } },
+  { "id": "holes", "icon": "○", "category": "leather", "enabled": false, "localization": { "enabled": true, "label": "toolbar.holes.label", "tooltip": "toolbar.holes.tooltip" } },
+  { "id": "hardware", "icon": "◆", "category": "leather", "enabled": false, "localization": { "enabled": true, "label": "toolbar.hardware.label", "tooltip": "toolbar.hardware.tooltip" } },
+  { "id": "fold", "icon": "⌞", "category": "leather", "enabled": false, "localization": { "enabled": true, "label": "toolbar.fold.label", "tooltip": "toolbar.fold.tooltip" } }
+]

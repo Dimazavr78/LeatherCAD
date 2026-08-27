@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { getVisibleTicks, type ViewBox } from './canvasMath';
 
 interface VerticalRulerProps {
@@ -11,6 +12,7 @@ export function VerticalRuler({
     majorSpacing,
     height,
 }: VerticalRulerProps) {
+    const { t } = useTranslation();
     const ticks = getVisibleTicks(
         viewBox.y,
         viewBox.y + viewBox.height,
@@ -22,7 +24,7 @@ export function VerticalRuler({
             className="canvas-ruler-vertical"
             viewBox={`0 0 42 ${Math.max(height, 1)}`}
             preserveAspectRatio="none"
-            aria-label="Vertical ruler"
+            aria-label={t('ruler.vertical')}
         >
             {ticks.map((tick) => {
                 const y = ((tick - viewBox.y) / viewBox.height) * height;

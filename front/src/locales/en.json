@@ -1,0 +1,37 @@
+{
+  "app": { "name": "LeatherCAD", "local": "Local" },
+  "menu": {
+    "file": "File",
+    "edit": "Edit",
+    "view": "View",
+    "project": "Project",
+    "help": "Help"
+  },
+  "toolbar": {
+    "sections": { "tools": "Tools", "leather": "Leather" },
+    "select": { "label": "Select", "tooltip": "Select and edit objects" },
+    "line": { "label": "Line", "tooltip": "Create line" },
+    "rectangle": { "label": "Rectangle", "tooltip": "Create rectangle" },
+    "circle": { "label": "Circle", "tooltip": "Create circle" },
+    "arc": { "label": "Arc", "tooltip": "Create arc" },
+    "part": { "label": "Part", "tooltip": "Leather part" },
+    "stitch": { "label": "Stitch", "tooltip": "Stitching" },
+    "holes": { "label": "Holes", "tooltip": "Holes" },
+    "hardware": { "label": "Hardware", "tooltip": "Hardware" },
+    "fold": { "label": "Fold", "tooltip": "Fold line" }
+  },
+  "properties": {
+    "title": "Properties",
+    "nothingSelected": "Nothing selected",
+    "nothingSelectedDescription": "Select an object on the canvas to see its properties.",
+    "rectangle": { "title": "Rectangle" },
+    "sections": { "position": "Position", "size": "Size" },
+    "fields": { "x": "X", "y": "Y", "width": "Width", "height": "Height" }
+  },
+  "canvas": { "title": "Canvas", "grid": "Grid", "snap": "Snap", "objects": "Objects" },
+  "zoom": { "fit": "Fit", "in": "Zoom in", "out": "Zoom out" },
+  "common": { "on": "ON", "off": "OFF", "mm": "mm" },
+  "language": { "title": "Language", "english": "English", "russian": "Russian" },
+  "panels": { "expand": "Expand", "collapse": "Collapse" },
+  "ruler": { "horizontal": "Horizontal ruler", "vertical": "Vertical ruler" }
+}
