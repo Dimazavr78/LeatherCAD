@@ -8,7 +8,12 @@
     "help": "Help"
   },
   "toolbar": {
-    "sections": { "tools": "Tools", "leather": "Leather" },
+    "sections": {
+      "draw": "Draw",
+      "modify": "Modify",
+      "annotate": "Annotate",
+      "leather": "Leather"
+    },
     "select": { "label": "Select", "tooltip": "Select and edit objects" },
     "line": { "label": "Line", "tooltip": "Create line" },
     "polyline": {
@@ -18,6 +23,12 @@
     "rectangle": { "label": "Rectangle", "tooltip": "Create rectangle" },
     "circle": { "label": "Circle", "tooltip": "Create circle" },
     "arc": { "label": "Arc", "tooltip": "Create arc" },
+    "fillet": { "label": "Fillet", "tooltip": "Round a polyline vertex" },
+    "dimension": {
+      "label": "Dimension",
+      "tooltip": "Create a persistent CAD dimension"
+    },
+    "measure": { "label": "Measure", "tooltip": "Measure between two points" },
     "part": { "label": "Part", "tooltip": "Leather part" },
     "stitch": { "label": "Stitch", "tooltip": "Stitching" },
     "holes": { "label": "Holes", "tooltip": "Holes" },
@@ -34,6 +45,7 @@
     "circle": { "title": "Circle" },
     "arc": { "title": "Arc" },
     "stitch": { "title": "Stitch" },
+    "dimension": { "title": "Dimension" },
     "sections": {
       "position": "Position",
       "size": "Size",
@@ -43,7 +55,8 @@
       "geometry": "Geometry",
       "stitch": "Stitch layout",
       "holes": "Holes",
-      "display": "Display"
+      "display": "Display",
+      "corners": "Corners"
     },
     "fields": {
       "x": "X",
@@ -72,7 +85,17 @@
       "holeAngle": "Hole angle",
       "holes": "Hole count",
       "showLine": "Show stitch line",
-      "showHoles": "Show holes"
+      "showHoles": "Show holes",
+      "linkCorners": "Link corners",
+      "topLeft": "Top left",
+      "topRight": "Top right",
+      "bottomRight": "Bottom right",
+      "bottomLeft": "Bottom left",
+      "vertex": "Vertex",
+      "dimensionType": "Type",
+      "value": "Value",
+      "precision": "Precision",
+      "showUnit": "Show unit"
     },
     "options": {
       "fixed-spacing": "Fixed spacing",
@@ -85,7 +108,13 @@
       "diamond": "Diamond",
       "slit": "Slit",
       "follow-path": "Follow path",
-      "45": "45°"
+      "45": "45°",
+      "aligned": "Aligned",
+      "horizontal": "Horizontal",
+      "vertical": "Vertical",
+      "radius": "Radius",
+      "diameter": "Diameter",
+      "arc-length": "Arc length"
     },
     "warnings": {
       "spacing-deviation": "Large spacing adjustment",
@@ -94,6 +123,7 @@
       "missingSource": "Missing source"
     }
   },
+  "measure": { "distance": "Distance", "angle": "Angle" },
   "canvas": {
     "title": "Canvas",
     "grid": "Grid",

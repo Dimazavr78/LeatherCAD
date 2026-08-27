@@ -19,6 +19,9 @@ function getToolId(tool: ToolConfig): Tool | null {
     "circle",
     "arc",
     "stitch",
+    "fillet",
+    "dimension",
+    "measure",
   ].includes(tool.id)
     ? (tool.id as Tool)
     : null;
@@ -29,7 +32,7 @@ export function LeftToolbar({ activeTool, onToolChange }: LeftToolbarProps) {
 
   return (
     <div className="left-toolbar">
-      {(["tools", "leather"] as const).map((category) => (
+      {(["draw", "modify", "annotate", "leather"] as const).map((category) => (
         <section className="tool-section" key={category}>
           <div className="section-title">
             {t(`toolbar.sections.${category}`).toUpperCase()}

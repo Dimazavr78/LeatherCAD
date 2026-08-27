@@ -13,9 +13,7 @@ export interface StitchHole {
   corner?: boolean;
 }
 export type StitchWarning =
-  | "spacing-deviation"
-  | "too-small-path"
-  | "offset-failed";
+  "spacing-deviation" | "too-small-path" | "offset-failed";
 export interface GeneratedStitch {
   holes: StitchHole[];
   desiredSpacing: number;

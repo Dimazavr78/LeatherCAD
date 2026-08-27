@@ -1,7 +1,10 @@
 [
-  { "id": "file", "localization": { "enabled": true, "label": "menu.file" } },
-  { "id": "edit", "localization": { "enabled": true, "label": "menu.edit" } },
-  { "id": "view", "localization": { "enabled": true, "label": "menu.view" } },
-  { "id": "project", "localization": { "enabled": true, "label": "menu.project" } },
-  { "id": "help", "localization": { "enabled": true, "label": "menu.help" } }
+    { "id": "file", "localization": { "enabled": true, "label": "menu.file" } },
+    { "id": "edit", "localization": { "enabled": true, "label": "menu.edit" } },
+    { "id": "view", "localization": { "enabled": true, "label": "menu.view" } },
+    {
+        "id": "project",
+        "localization": { "enabled": true, "label": "menu.project" }
+    },
+    { "id": "help", "localization": { "enabled": true, "label": "menu.help" } }
 ]

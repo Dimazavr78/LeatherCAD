@@ -2,7 +2,7 @@
   {
     "id": "select",
     "icon": "↖",
-    "category": "tools",
+    "category": "draw",
     "enabled": true,
     "localization": {
       "enabled": true,
@@ -13,7 +13,7 @@
   {
     "id": "line",
     "icon": "╱",
-    "category": "tools",
+    "category": "draw",
     "enabled": true,
     "localization": {
       "enabled": true,
@@ -24,7 +24,7 @@
   {
     "id": "polyline",
     "icon": "⌁",
-    "category": "tools",
+    "category": "draw",
     "enabled": true,
     "localization": {
       "enabled": true,
@@ -35,7 +35,7 @@
   {
     "id": "rectangle",
     "icon": "□",
-    "category": "tools",
+    "category": "draw",
     "enabled": true,
     "localization": {
       "enabled": true,
@@ -46,7 +46,7 @@
   {
     "id": "circle",
     "icon": "○",
-    "category": "tools",
+    "category": "draw",
     "enabled": true,
     "localization": {
       "enabled": true,
@@ -57,7 +57,7 @@
   {
     "id": "arc",
     "icon": "⌒",
-    "category": "tools",
+    "category": "draw",
     "enabled": true,
     "localization": {
       "enabled": true,
@@ -74,6 +74,39 @@
       "enabled": true,
       "label": "toolbar.part.label",
       "tooltip": "toolbar.part.tooltip"
+    }
+  },
+  {
+    "id": "fillet",
+    "icon": "⌜",
+    "category": "modify",
+    "enabled": true,
+    "localization": {
+      "enabled": true,
+      "label": "toolbar.fillet.label",
+      "tooltip": "toolbar.fillet.tooltip"
+    }
+  },
+  {
+    "id": "dimension",
+    "icon": "↔",
+    "category": "annotate",
+    "enabled": true,
+    "localization": {
+      "enabled": true,
+      "label": "toolbar.dimension.label",
+      "tooltip": "toolbar.dimension.tooltip"
+    }
+  },
+  {
+    "id": "measure",
+    "icon": "⌇",
+    "category": "annotate",
+    "enabled": true,
+    "localization": {
+      "enabled": true,
+      "label": "toolbar.measure.label",
+      "tooltip": "toolbar.measure.tooltip"
     }
   },
   {

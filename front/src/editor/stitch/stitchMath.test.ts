@@ -11,6 +11,13 @@ const rectangle: RectangleObject = {
   y: 0,
   width: 100,
   height: 70,
+  cornerRadii: {
+    topLeft: 0,
+    topRight: 0,
+    bottomRight: 0,
+    bottomLeft: 0,
+  },
+  linkCorners: true,
 };
 
 const parameters: StitchObject = {
@@ -34,8 +41,7 @@ test("rectangle offset creates the expected inner perimeter", () => {
   const path = createPath(rectangle, 3);
   assert.ok(path);
   assert.equal(getPathLength(path), 316);
-  assert.deepEqual(path.points[0], { x: 3, y: 3 });
-  assert.deepEqual(path.points[2], { x: 97, y: 67 });
+  assert.deepEqual(path.segments[0].start, { x: 3, y: 3 });
 });
 
 test("adaptive corner layout anchors each rectangle corner once", () => {

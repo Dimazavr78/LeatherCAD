@@ -23,6 +23,8 @@ import {
   type NudgeDirection,
 } from "../../editor/useEditorShortcuts";
 import type { CadObject, Tool } from "../../types/cad";
+import { normalizedRectangle } from "../../editor/geometry/rectangleGeometry";
+import { dependsOnObject } from "../../editor/dependencies";
 import { BottomBar } from "./BottomBar";
 import { TopBar } from "./TopBar";
 
@@ -77,9 +79,13 @@ export function AppShell() {
   const updateObject = useCallback(
     (id: string, patch: Partial<CadObject>) => {
       updateLiveState((document) => ({
-        objects: document.objects.map((object) =>
-          object.id === id ? ({ ...object, ...patch } as CadObject) : object,
-        ),
+        objects: document.objects.map((object) => {
+          if (object.id !== id) return object;
+          const updated = { ...object, ...patch } as CadObject;
+          return updated.type === "rectangle"
+            ? normalizedRectangle(updated)
+            : updated;
+        }),
       }));
     },
     [updateLiveState],
@@ -96,6 +102,17 @@ export function AppShell() {
     [updateLiveState],
   );
 
+  const commitObject = useCallback(
+    (updatedObject: CadObject) => {
+      commitState((document) => ({
+        objects: document.objects.map((object) =>
+          object.id === updatedObject.id ? updatedObject : object,
+        ),
+      }));
+    },
+    [commitState],
+  );
+
   const deleteSelected = useCallback(() => {
     if (canvasBusy) {
       requestCancel();
@@ -110,10 +127,7 @@ export function AppShell() {
       objects: document.objects.filter(
         (object) =>
           object.id !== selectedObjectId &&
-          !(
-            object.type === "stitch" &&
-            object.sourceObjectId === selectedObjectId
-          ),
+          !dependsOnObject(object, selectedObjectId),
       ),
     }));
     setSelectedObjectId(null);
@@ -275,6 +289,7 @@ export function AppShell() {
             onCursorPositionChange={setCursorPosition}
             onObjectCreate={addObject}
             onObjectUpdate={replaceObject}
+            onObjectCommit={commitObject}
             onSelectionChange={setSelectedObjectId}
             onInteractionStart={beginTransaction}
             onInteractionCommit={commitTransaction}

@@ -115,7 +115,11 @@ export function getVisibleTicks(
     const firstTick = Math.ceil(start / spacing) * spacing;
     const ticks: number[] = [];
 
-    for (let tick = firstTick; tick <= end && ticks.length < limit; tick += spacing) {
+    for (
+        let tick = firstTick;
+        tick <= end && ticks.length < limit;
+        tick += spacing
+    ) {
         ticks.push(Object.is(tick, -0) ? 0 : tick);
     }
 

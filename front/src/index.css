@@ -507,6 +507,63 @@ button {
   border-radius: 3px;
 }
 
+.dimension-line,
+.dimension-extension,
+.dimension-draft,
+.measure-line {
+  fill: none;
+  stroke: #d8b36a;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.dimension-extension {
+  stroke: #77808b;
+}
+
+.dimension-draft,
+.measure-line {
+  stroke-dasharray: 4 3;
+}
+
+.dimension-arrow {
+  fill: #d8b36a;
+}
+
+.dimension-text {
+  fill: #e2e6eb;
+  paint-order: stroke;
+  stroke: #15171a;
+  stroke-width: 3px;
+  user-select: none;
+}
+
+.object-snap {
+  fill: rgba(93, 196, 255, 0.18);
+  stroke: #5dc4ff;
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.object-snap--center {
+  rx: 50%;
+}
+
+.measure-panel {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: grid;
+  gap: 3px;
+  min-width: 180px;
+  padding: 10px 12px;
+  color: #dbe2ea;
+  background: rgba(25, 28, 32, 0.94);
+  border: 1px solid #414750;
+  border-radius: 4px;
+  pointer-events: none;
+}
+
 .cad-rectangle-draft {
   fill: rgba(142, 148, 157, 0.12);
   stroke: #b8bdc5;

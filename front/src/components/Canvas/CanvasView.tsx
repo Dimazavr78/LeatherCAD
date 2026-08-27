@@ -8,11 +8,13 @@ import {
 import { useTranslation } from "react-i18next";
 import type {
   CadObject,
+  DimensionReference,
   PathObject,
   Point,
   ResizeHandle,
   Tool,
 } from "../../types/cad";
+import { isPathObject } from "../../types/cad";
 import { translateCadObject } from "../../editor/cadObjectUtils";
 import {
   angleDegrees,
@@ -33,6 +35,14 @@ import {
   type ViewBox,
 } from "./canvasMath";
 import { resizeRectangle } from "./rectangleMath";
+import { ZERO_CORNER_RADII } from "../../editor/geometry/rectangleGeometry";
+import {
+  getObjectAnchors,
+  measurePoints,
+  resolveDimensionReference,
+  type SnapAnchor,
+} from "../../editor/dimensions/dimensionMath";
+import { calculateVertexFillet } from "../../editor/geometry/pathMath";
 
 interface Props {
   viewBox: ViewBox;
@@ -45,6 +55,7 @@ interface Props {
   onCursorPositionChange: (point: Point | null) => void;
   onObjectCreate: (object: CadObject) => void;
   onObjectUpdate: (object: CadObject) => void;
+  onObjectCommit: (object: CadObject) => void;
   onSelectionChange: (id: string | null) => void;
   onInteractionStart: () => void;
   onInteractionCommit: () => void;
@@ -65,6 +76,16 @@ interface ClickDraft {
   points: Point[];
   cursor: Point;
 }
+interface DimensionDraft {
+  points: Point[];
+  references: DimensionReference[];
+  cursor: Point;
+}
+interface MeasureDraft {
+  start: Point;
+  end: Point;
+  complete: boolean;
+}
 type EditHandle =
   | { kind: "rectangle"; handle: ResizeHandle }
   | { kind: "point"; index: number }
@@ -78,7 +99,7 @@ type Interaction =
       type: "move";
       pointerId: number;
       startPointer: Point;
-      startObject: PathObject;
+      startObject: PathObject | Extract<CadObject, { type: "dimension" }>;
     }
   | {
       type: "handle";
@@ -120,6 +141,11 @@ export function CanvasView(props: Props) {
   const [stitchPreviewSourceId, setStitchPreviewSourceId] = useState<
     string | null
   >(null);
+  const [dimensionDraft, setDimensionDraft] = useState<DimensionDraft | null>(
+    null,
+  );
+  const [measureDraft, setMeasureDraft] = useState<MeasureDraft | null>(null);
+  const [snapMarker, setSnapMarker] = useState<SnapAnchor | null>(null);
   const selected =
     objects.find((object) => object.id === selectedObjectId) ?? null;
   const zoom = calculateZoomPercent(viewBox);
@@ -156,9 +182,22 @@ export function CanvasView(props: Props) {
 
   useEffect(() => {
     onBusyChange(
-      Boolean(rectangleDraft || clickDraft || interaction.type !== "idle"),
+      Boolean(
+        rectangleDraft ||
+        clickDraft ||
+        dimensionDraft ||
+        (measureDraft && !measureDraft.complete) ||
+        interaction.type !== "idle",
+      ),
     );
-  }, [clickDraft, interaction.type, onBusyChange, rectangleDraft]);
+  }, [
+    clickDraft,
+    dimensionDraft,
+    interaction.type,
+    measureDraft,
+    onBusyChange,
+    rectangleDraft,
+  ]);
 
   const release = (pointerId: number) => {
     const svg = svgRef.current;
@@ -172,6 +211,9 @@ export function CanvasView(props: Props) {
     setInteraction({ type: "idle" });
     setRectangleDraft(null);
     setClickDraft(null);
+    setDimensionDraft(null);
+    setMeasureDraft(null);
+    setSnapMarker(null);
   };
   useEffect(() => {
     window.addEventListener("leathercad:cancel", cancel);
@@ -208,6 +250,28 @@ export function CanvasView(props: Props) {
           y: snapToGrid(point.y, snapSpacing),
         }
       : point;
+  const resolveSnap = (point: Point) => {
+    const threshold = 10 * screenUnit;
+    let best: SnapAnchor | null = null;
+    let bestDistance = threshold;
+    for (const object of objects) {
+      if (!isPathObject(object)) continue;
+      for (const anchor of getObjectAnchors(object)) {
+        const current = distance(point, anchor.point);
+        if (current <= bestDistance) {
+          best = anchor;
+          bestDistance = current;
+        }
+      }
+    }
+    return best
+      ? { point: best.point, reference: best.reference, marker: best }
+      : {
+          point: snap(point),
+          reference: { anchor: "point" as const, point: snap(point) },
+          marker: null,
+        };
+  };
   const create = (object: CadObject) => onObjectCreate(object);
   const finishPolyline = (closed: boolean) => {
     if (clickDraft?.tool !== "polyline") return;
@@ -394,7 +458,97 @@ export function CanvasView(props: Props) {
     if (event.button !== 0) return;
     const raw = canvasPoint(event.clientX, event.clientY);
     if (!raw) return;
-    const point = snap(raw);
+    const snapped = resolveSnap(raw);
+    const point = snapped.point;
+    setSnapMarker(snapped.marker);
+    if (activeTool === "fillet") {
+      let targetObject: Extract<PathObject, { type: "polyline" }> | null = null;
+      let targetIndex = -1;
+      let nearest = 10 * screenUnit;
+      for (const object of objects) {
+        if (object.type !== "polyline") continue;
+        for (let index = 0; index < object.points.length; index += 1) {
+          const vertex = object.points[index];
+          const current = distance(raw, vertex);
+          if (current < nearest) {
+            nearest = current;
+            targetObject = object;
+            targetIndex = index;
+          }
+        }
+      }
+      if (targetObject && targetIndex >= 0) {
+        const object = targetObject;
+        const index = targetIndex;
+        if (
+          !object.closed &&
+          (index === 0 || index === object.points.length - 1)
+        )
+          return;
+        const previous =
+          object.points[
+            (index - 1 + object.points.length) % object.points.length
+          ];
+        const next = object.points[(index + 1) % object.points.length];
+        const calculated =
+          previous && next
+            ? calculateVertexFillet(previous, object.points[index], next, 5)
+            : null;
+        if (calculated)
+          props.onObjectCommit({
+            ...object,
+            points: object.points.map((vertex, vertexIndex) =>
+              vertexIndex === index
+                ? { ...vertex, cornerRadius: calculated.radius }
+                : vertex,
+            ),
+          });
+      }
+      return;
+    }
+    if (activeTool === "dimension") {
+      if (!dimensionDraft)
+        setDimensionDraft({
+          points: [point],
+          references: [snapped.reference],
+          cursor: point,
+        });
+      else if (dimensionDraft.points.length === 1)
+        setDimensionDraft({
+          ...dimensionDraft,
+          points: [...dimensionDraft.points, point],
+          references: [...dimensionDraft.references, snapped.reference],
+          cursor: point,
+        });
+      else {
+        const [a, b] = dimensionDraft.points;
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const length = Math.hypot(dx, dy) || 1;
+        const midpoint = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        const offset =
+          (point.x - midpoint.x) * (-dy / length) +
+          (point.y - midpoint.y) * (dx / length);
+        create({
+          id: crypto.randomUUID(),
+          type: "dimension",
+          dimensionType: "aligned",
+          referenceA: dimensionDraft.references[0],
+          referenceB: dimensionDraft.references[1],
+          offset,
+          precision: 2,
+          showUnit: true,
+        });
+        setDimensionDraft(null);
+      }
+      return;
+    }
+    if (activeTool === "measure") {
+      if (!measureDraft || measureDraft.complete)
+        setMeasureDraft({ start: point, end: point, complete: false });
+      else setMeasureDraft({ ...measureDraft, end: point, complete: true });
+      return;
+    }
     if (activeTool === "rectangle") {
       event.currentTarget.setPointerCapture(event.pointerId);
       setRectangleDraft({
@@ -414,6 +568,18 @@ export function CanvasView(props: Props) {
   const pointerMove = (event: PointerEvent<SVGSVGElement>) => {
     const raw = canvasPoint(event.clientX, event.clientY);
     if (raw) props.onCursorPositionChange(raw);
+    const snapped = raw ? resolveSnap(raw) : null;
+    if (
+      raw &&
+      (activeTool === "dimension" ||
+        activeTool === "measure" ||
+        activeTool === "fillet")
+    )
+      setSnapMarker(snapped?.marker ?? null);
+    if (snapped && dimensionDraft)
+      setDimensionDraft({ ...dimensionDraft, cursor: snapped.point });
+    if (snapped && measureDraft && !measureDraft.complete)
+      setMeasureDraft({ ...measureDraft, end: snapped.point });
     if (raw && rectangleDraft?.pointerId === event.pointerId)
       setRectangleDraft({ ...rectangleDraft, current: snap(raw) });
     if (raw && clickDraft) setClickDraft({ ...clickDraft, cursor: snap(raw) });
@@ -424,13 +590,34 @@ export function CanvasView(props: Props) {
     ) {
       const point = snap(raw);
       if (interaction.type === "move")
-        props.onObjectUpdate(
-          translateCadObject(
-            interaction.startObject,
-            point.x - interaction.startPointer.x,
-            point.y - interaction.startPointer.y,
-          ),
-        );
+        if (interaction.startObject.type === "dimension") {
+          const deltaX = point.x - interaction.startPointer.x;
+          const deltaY = point.y - interaction.startPointer.y;
+          const dimension = interaction.startObject;
+          let delta = dimension.dimensionType === "vertical" ? deltaX : deltaY;
+          if (dimension.dimensionType === "aligned" && dimension.referenceB) {
+            const a = resolveDimensionReference(dimension.referenceA, objects);
+            const b = resolveDimensionReference(dimension.referenceB, objects);
+            if (a && b) {
+              const dx = b.x - a.x;
+              const dy = b.y - a.y;
+              const length = Math.hypot(dx, dy) || 1;
+              delta = deltaX * (-dy / length) + deltaY * (dx / length);
+            }
+          }
+          props.onObjectUpdate({
+            ...dimension,
+            offset: dimension.offset + delta,
+          });
+        } else {
+          props.onObjectUpdate(
+            translateCadObject(
+              interaction.startObject,
+              point.x - interaction.startPointer.x,
+              point.y - interaction.startPointer.y,
+            ),
+          );
+        }
       else
         props.onObjectUpdate(
           updateHandle(interaction.startObject, interaction.handle, point),
@@ -462,7 +649,13 @@ export function CanvasView(props: Props) {
         rectangleDraft.current,
       );
       if (geometry.width >= MIN_SIZE && geometry.height >= MIN_SIZE)
-        create({ id: crypto.randomUUID(), type: "rectangle", ...geometry });
+        create({
+          id: crypto.randomUUID(),
+          type: "rectangle",
+          ...geometry,
+          cornerRadii: { ...ZERO_CORNER_RADII },
+          linkCorners: true,
+        });
       release(event.pointerId);
       setRectangleDraft(null);
       return;
@@ -488,7 +681,12 @@ export function CanvasView(props: Props) {
 
   const selectObject = (id: string) => {
     const source = objects.find((object) => object.id === id);
-    if (activeTool === "stitch" && source && source.type !== "stitch") {
+    if (
+      activeTool === "stitch" &&
+      source &&
+      source.type !== "stitch" &&
+      source.type !== "dimension"
+    ) {
       create({
         id: crypto.randomUUID(),
         type: "stitch",
@@ -648,7 +846,8 @@ export function CanvasView(props: Props) {
           {activeTool === "select" &&
             selected &&
             selected.type !== "rectangle" &&
-            selected.type !== "stitch" && (
+            selected.type !== "stitch" &&
+            selected.type !== "dimension" && (
               <ObjectHandles
                 object={selected}
                 unit={screenUnit}
@@ -686,6 +885,33 @@ export function CanvasView(props: Props) {
               vectorEffect="non-scaling-stroke"
             />
           )}
+          {dimensionDraft && (
+            <path
+              className="dimension-draft"
+              d={`M ${dimensionDraft.points[0].x} ${dimensionDraft.points[0].y} L ${dimensionDraft.points[1]?.x ?? dimensionDraft.cursor.x} ${dimensionDraft.points[1]?.y ?? dimensionDraft.cursor.y}${dimensionDraft.points.length > 1 ? ` L ${dimensionDraft.cursor.x} ${dimensionDraft.cursor.y}` : ""}`}
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+          {measureDraft && (
+            <line
+              className="measure-line"
+              x1={measureDraft.start.x}
+              y1={measureDraft.start.y}
+              x2={measureDraft.end.x}
+              y2={measureDraft.end.y}
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
+          {snapMarker && (
+            <rect
+              className={`object-snap object-snap--${snapMarker.kind}`}
+              x={snapMarker.point.x - 4 * screenUnit}
+              y={snapMarker.point.y - 4 * screenUnit}
+              width={8 * screenUnit}
+              height={8 * screenUnit}
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
         </svg>
         <div className="canvas-info">
           <span>{t("canvas.title")}</span>
@@ -694,6 +920,26 @@ export function CanvasView(props: Props) {
             {t("canvas.objects")}: {objects.length}
           </span>
         </div>
+        {measureDraft &&
+          (() => {
+            const measurement = measurePoints(
+              measureDraft.start,
+              measureDraft.end,
+            );
+            return (
+              <div className="measure-panel">
+                <strong>
+                  {t("measure.distance")}: {measurement.distance.toFixed(2)}{" "}
+                  {t("common.mm")}
+                </strong>
+                <span>ΔX: {measurement.deltaX.toFixed(2)}</span>
+                <span>ΔY: {measurement.deltaY.toFixed(2)}</span>
+                <span>
+                  {t("measure.angle")}: {measurement.angle.toFixed(1)}°
+                </span>
+              </div>
+            );
+          })()}
       </div>
     </div>
   );

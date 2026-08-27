@@ -5,9 +5,13 @@ import type {
   StitchObject,
   Tool,
 } from "../../types/cad";
-import { arcPathData } from "../../editor/geometry/geometryMath";
-import { createPath } from "../../editor/geometry/pathMath";
+import { buildPathData, createPath } from "../../editor/geometry/pathMath";
 import { generateStitch } from "../../editor/stitch/stitchMath";
+import {
+  getDimensionValue,
+  getRadialEnd,
+  resolveDimensionReference,
+} from "../../editor/dimensions/dimensionMath";
 
 interface Props {
   object: CadObject;
@@ -21,12 +25,7 @@ interface Props {
 }
 
 function pathData(object: PathObject): string {
-  if (object.type === "line")
-    return `M ${object.x1} ${object.y1} L ${object.x2} ${object.y2}`;
-  if (object.type === "polyline")
-    return `${object.points.map((point, index) => `${index ? "L" : "M"} ${point.x} ${point.y}`).join(" ")}${object.closed ? " Z" : ""}`;
-  if (object.type === "arc") return arcPathData(object);
-  return "";
+  return buildPathData(createPath(object) ?? { segments: [], closed: false });
 }
 
 export function CadObjectRenderer({
@@ -41,6 +40,12 @@ export function CadObjectRenderer({
 }: Props) {
   const pointerDown = (event: PointerEvent<SVGElement>) => {
     if (event.button !== 0) return;
+    if (
+      activeTool === "dimension" ||
+      activeTool === "measure" ||
+      activeTool === "fillet"
+    )
+      return;
     event.stopPropagation();
     if (activeTool === "stitch" || activeTool === "select") onSelect(object.id);
     if (activeTool === "select" && object.type !== "stitch")
@@ -56,18 +61,25 @@ export function CadObjectRenderer({
         onPointerDown={pointerDown}
       />
     );
+  if (object.type === "dimension")
+    return (
+      <DimensionRenderer
+        dimension={object}
+        objects={objects}
+        screenUnit={screenUnit}
+        className={className}
+        onPointerDown={pointerDown}
+      />
+    );
   const hover = {
     onPointerEnter: () => onHover?.(object.id),
     onPointerLeave: () => onHover?.(null),
   };
   if (object.type === "rectangle")
     return (
-      <rect
+      <path
         className={className}
-        x={object.x}
-        y={object.y}
-        width={object.width}
-        height={object.height}
+        d={pathData(object)}
         vectorEffect="non-scaling-stroke"
         onPointerDown={pointerDown}
         {...hover}
@@ -102,6 +114,117 @@ export function CadObjectRenderer({
   );
 }
 
+function DimensionRenderer({
+  dimension,
+  objects,
+  screenUnit,
+  className,
+  onPointerDown,
+}: {
+  dimension: Extract<CadObject, { type: "dimension" }>;
+  objects: CadObject[];
+  screenUnit: number;
+  className: string;
+  onPointerDown: (event: PointerEvent<SVGElement>) => void;
+}) {
+  const a = resolveDimensionReference(dimension.referenceA, objects);
+  const radial = getRadialEnd(dimension, objects);
+  const b =
+    radial ??
+    (dimension.referenceB
+      ? resolveDimensionReference(dimension.referenceB, objects)
+      : null);
+  if (!a || !b) return null;
+  let lineA = a;
+  let lineB = b;
+  if (dimension.dimensionType === "horizontal") {
+    const y = (a.y + b.y) / 2 + dimension.offset;
+    lineA = { x: a.x, y };
+    lineB = { x: b.x, y };
+  } else if (dimension.dimensionType === "vertical") {
+    const x = (a.x + b.x) / 2 + dimension.offset;
+    lineA = { x, y: a.y };
+    lineB = { x, y: b.y };
+  } else {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const length = Math.hypot(dx, dy) || 1;
+    const normal = { x: -dy / length, y: dx / length };
+    lineA = {
+      x: a.x + normal.x * dimension.offset,
+      y: a.y + normal.y * dimension.offset,
+    };
+    lineB = {
+      x: b.x + normal.x * dimension.offset,
+      y: b.y + normal.y * dimension.offset,
+    };
+  }
+  const value = getDimensionValue(dimension, objects).toFixed(
+    dimension.precision,
+  );
+  const prefix =
+    dimension.dimensionType === "radius"
+      ? "R "
+      : dimension.dimensionType === "diameter"
+        ? "Ø "
+        : dimension.dimensionType === "arc-length"
+          ? "⌒ "
+          : "";
+  const label = `${prefix}${value}${dimension.showUnit ? " mm" : ""}`;
+  const mid = { x: (lineA.x + lineB.x) / 2, y: (lineA.y + lineB.y) / 2 };
+  const arrow = 5 * screenUnit;
+  return (
+    <g className={className} onPointerDown={onPointerDown}>
+      {!radial && (
+        <>
+          <line
+            className="dimension-extension"
+            x1={a.x}
+            y1={a.y}
+            x2={lineA.x}
+            y2={lineA.y}
+          />
+          <line
+            className="dimension-extension"
+            x1={b.x}
+            y1={b.y}
+            x2={lineB.x}
+            y2={lineB.y}
+          />
+        </>
+      )}
+      <line
+        className="dimension-line"
+        x1={lineA.x}
+        y1={lineA.y}
+        x2={lineB.x}
+        y2={lineB.y}
+      />
+      <circle
+        className="dimension-arrow"
+        cx={lineA.x}
+        cy={lineA.y}
+        r={arrow / 2}
+      />
+      <circle
+        className="dimension-arrow"
+        cx={lineB.x}
+        cy={lineB.y}
+        r={arrow / 2}
+      />
+      <text
+        className="dimension-text"
+        x={mid.x}
+        y={mid.y - 6 * screenUnit}
+        fontSize={11 * screenUnit}
+        textAnchor="middle"
+      >
+        {label}
+      </text>
+    </g>
+  );
+}
+
 function StitchRenderer({
   stitch,
   objects,
@@ -115,7 +238,9 @@ function StitchRenderer({
 }) {
   const source = objects.find(
     (candidate): candidate is PathObject =>
-      candidate.id === stitch.sourceObjectId && candidate.type !== "stitch",
+      candidate.id === stitch.sourceObjectId &&
+      candidate.type !== "stitch" &&
+      candidate.type !== "dimension",
   );
   if (!source) return null;
   const path = createPath(source, stitch.offset);

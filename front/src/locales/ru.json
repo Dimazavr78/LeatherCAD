@@ -8,7 +8,12 @@
     "help": "Помощь"
   },
   "toolbar": {
-    "sections": { "tools": "Инструменты", "leather": "Кожа" },
+    "sections": {
+      "draw": "Черчение",
+      "modify": "Изменение",
+      "annotate": "Аннотации",
+      "leather": "Кожа"
+    },
     "select": {
       "label": "Выбор",
       "tooltip": "Выбор и редактирование объектов"
@@ -21,6 +26,15 @@
     },
     "circle": { "label": "Окружность", "tooltip": "Создать окружность" },
     "arc": { "label": "Дуга", "tooltip": "Создать дугу" },
+    "fillet": {
+      "label": "Скругление",
+      "tooltip": "Скруглить вершину полилинии"
+    },
+    "dimension": { "label": "Размер", "tooltip": "Создать постоянный размер" },
+    "measure": {
+      "label": "Измерить",
+      "tooltip": "Измерить расстояние между точками"
+    },
     "part": { "label": "Деталь", "tooltip": "Деталь из кожи" },
     "stitch": { "label": "Шов", "tooltip": "Линия шва" },
     "holes": { "label": "Отверстия", "tooltip": "Отверстия" },
@@ -37,6 +51,7 @@
     "circle": { "title": "Окружность" },
     "arc": { "title": "Дуга" },
     "stitch": { "title": "Шов" },
+    "dimension": { "title": "Размер" },
     "sections": {
       "position": "Положение",
       "size": "Размер",
@@ -46,7 +61,8 @@
       "geometry": "Геометрия",
       "stitch": "Параметры шва",
       "holes": "Отверстия",
-      "display": "Отображение"
+      "display": "Отображение",
+      "corners": "Углы"
     },
     "fields": {
       "x": "X",
@@ -75,7 +91,17 @@
       "holeAngle": "Угол отверстия",
       "holes": "Количество отверстий",
       "showLine": "Показывать линию шва",
-      "showHoles": "Показывать отверстия"
+      "showHoles": "Показывать отверстия",
+      "linkCorners": "Связать углы",
+      "topLeft": "Верхний левый",
+      "topRight": "Верхний правый",
+      "bottomRight": "Нижний правый",
+      "bottomLeft": "Нижний левый",
+      "vertex": "Вершина",
+      "dimensionType": "Тип",
+      "value": "Значение",
+      "precision": "Точность",
+      "showUnit": "Показывать единицу"
     },
     "options": {
       "fixed-spacing": "Фиксированный шаг",
@@ -88,7 +114,13 @@
       "diamond": "Ромб",
       "slit": "Прорезь",
       "follow-path": "По направлению пути",
-      "45": "45°"
+      "45": "45°",
+      "aligned": "По объекту",
+      "horizontal": "Горизонтальный",
+      "vertical": "Вертикальный",
+      "radius": "Радиус",
+      "diameter": "Диаметр",
+      "arc-length": "Длина дуги"
     },
     "warnings": {
       "spacing-deviation": "Значительное изменение шага",
@@ -97,6 +129,7 @@
       "missingSource": "Источник отсутствует"
     }
   },
+  "measure": { "distance": "Расстояние", "angle": "Угол" },
   "canvas": {
     "title": "Холст",
     "grid": "Сетка",

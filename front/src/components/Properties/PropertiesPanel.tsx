@@ -1,9 +1,19 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import type { CadObject, PathObject, StitchObject } from "../../types/cad";
+import type {
+  CadObject,
+  DimensionObject,
+  PathObject,
+  StitchObject,
+} from "../../types/cad";
 import { distance, normalizeSweep } from "../../editor/geometry/geometryMath";
-import { createPath } from "../../editor/geometry/pathMath";
+import {
+  calculateVertexFillet,
+  createPath,
+} from "../../editor/geometry/pathMath";
 import { generateStitch } from "../../editor/stitch/stitchMath";
+import { getDimensionValue } from "../../editor/dimensions/dimensionMath";
+import { normalizeRectangleCornerRadii } from "../../editor/geometry/rectangleGeometry";
 
 interface Props {
   selectedObject: CadObject | null;
@@ -62,7 +72,29 @@ function ObjectProperties({
     />
   );
   let body: ReactNode;
-  if (object.type === "rectangle")
+  if (object.type === "rectangle") {
+    const setRadius = (
+      field: keyof typeof object.cornerRadii,
+      value: string,
+    ) => {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return;
+      const requested = object.linkCorners
+        ? {
+            topLeft: parsed,
+            topRight: parsed,
+            bottomRight: parsed,
+            bottomLeft: parsed,
+          }
+        : { ...object.cornerRadii, [field]: parsed };
+      onObjectChange(object.id, {
+        cornerRadii: normalizeRectangleCornerRadii(
+          object.width,
+          object.height,
+          requested,
+        ),
+      });
+    };
     body = (
       <>
         <Group title={t("properties.sections.position")}>
@@ -73,9 +105,59 @@ function ObjectProperties({
           {input(t("properties.fields.width"), object.width, "width", 0.1)}
           {input(t("properties.fields.height"), object.height, "height", 0.1)}
         </Group>
+        <Group title={t("properties.sections.corners")}>
+          <Check
+            label={t("properties.fields.linkCorners")}
+            checked={object.linkCorners}
+            onChange={(checked) =>
+              onObjectChange(object.id, { linkCorners: checked })
+            }
+            {...events}
+          />
+          {object.linkCorners ? (
+            <NumericProperty
+              label={t("properties.fields.radius")}
+              value={object.cornerRadii.topLeft}
+              min={0}
+              onChange={(value) => setRadius("topLeft", value)}
+              {...events}
+            />
+          ) : (
+            <>
+              <NumericProperty
+                label={t("properties.fields.topLeft")}
+                value={object.cornerRadii.topLeft}
+                min={0}
+                onChange={(value) => setRadius("topLeft", value)}
+                {...events}
+              />
+              <NumericProperty
+                label={t("properties.fields.topRight")}
+                value={object.cornerRadii.topRight}
+                min={0}
+                onChange={(value) => setRadius("topRight", value)}
+                {...events}
+              />
+              <NumericProperty
+                label={t("properties.fields.bottomRight")}
+                value={object.cornerRadii.bottomRight}
+                min={0}
+                onChange={(value) => setRadius("bottomRight", value)}
+                {...events}
+              />
+              <NumericProperty
+                label={t("properties.fields.bottomLeft")}
+                value={object.cornerRadii.bottomLeft}
+                min={0}
+                onChange={(value) => setRadius("bottomLeft", value)}
+                {...events}
+              />
+            </>
+          )}
+        </Group>
       </>
     );
-  else if (object.type === "line") {
+  } else if (object.type === "line") {
     const length = distance(
       { x: object.x1, y: object.y1 },
       { x: object.x2, y: object.y2 },
@@ -117,6 +199,46 @@ function ObjectProperties({
           />
           {t("properties.fields.closed")}
         </label>
+        <Group title={t("properties.sections.corners")}>
+          {object.points.map((point, index) => (
+            <NumericProperty
+              key={index}
+              label={`${t("properties.fields.vertex")} ${index + 1}`}
+              value={point.cornerRadius ?? 0}
+              min={0}
+              onChange={(value) => {
+                const radius = Number(value);
+                const previous =
+                  object.points[
+                    (index - 1 + object.points.length) % object.points.length
+                  ];
+                const next = object.points[(index + 1) % object.points.length];
+                const calculated =
+                  Number.isFinite(radius) &&
+                  previous &&
+                  next &&
+                  (object.closed ||
+                    (index > 0 && index < object.points.length - 1))
+                    ? calculateVertexFillet(
+                        previous,
+                        point,
+                        next,
+                        Math.max(0, radius),
+                      )
+                    : null;
+                if (Number.isFinite(radius))
+                  onObjectChange(object.id, {
+                    points: object.points.map((item, pointIndex) =>
+                      pointIndex === index
+                        ? { ...item, cornerRadius: calculated?.radius ?? 0 }
+                        : item,
+                    ),
+                  });
+              }}
+              {...events}
+            />
+          ))}
+        </Group>
       </>
     );
   else if (object.type === "circle")
@@ -184,10 +306,19 @@ function ObjectProperties({
         />
       </>
     );
-  } else
+  } else if (object.type === "stitch")
     body = (
       <StitchProperties
         stitch={object}
+        objects={objects}
+        onChange={onObjectChange}
+        {...events}
+      />
+    );
+  else
+    body = (
+      <DimensionProperties
+        dimension={object}
         objects={objects}
         onChange={onObjectChange}
         {...events}
@@ -200,6 +331,72 @@ function ObjectProperties({
       </div>
       {body}
     </div>
+  );
+}
+
+function DimensionProperties({
+  dimension,
+  objects,
+  onChange,
+  ...events
+}: {
+  dimension: DimensionObject;
+  objects: CadObject[];
+  onChange: Change;
+  onEditStart: () => void;
+  onEditCommit: () => void;
+  onEditCancel: () => void;
+}) {
+  const { t } = useTranslation();
+  const value = getDimensionValue(dimension, objects);
+  return (
+    <>
+      <Select
+        label={t("properties.fields.dimensionType")}
+        value={dimension.dimensionType}
+        values={[
+          "aligned",
+          "horizontal",
+          "vertical",
+          "radius",
+          "diameter",
+          "arc-length",
+        ]}
+        onChange={(next) =>
+          onChange(dimension.id, {
+            dimensionType: next as DimensionObject["dimensionType"],
+          })
+        }
+        {...events}
+      />
+      <Read label={t("properties.fields.value")} value={value} />
+      <NumericProperty
+        label={t("properties.fields.precision")}
+        value={dimension.precision}
+        min={0}
+        unit=""
+        onChange={(next) =>
+          onChange(dimension.id, {
+            precision: Math.min(3, Math.max(0, Math.round(Number(next)))),
+          })
+        }
+        {...events}
+      />
+      <NumericProperty
+        label={t("properties.fields.offset")}
+        value={dimension.offset}
+        onChange={(next) =>
+          onChange(dimension.id, { offset: Number(next) || 0 })
+        }
+        {...events}
+      />
+      <Check
+        label={t("properties.fields.showUnit")}
+        checked={dimension.showUnit}
+        onChange={(checked) => onChange(dimension.id, { showUnit: checked })}
+        {...events}
+      />
+    </>
   );
 }
 
@@ -219,7 +416,9 @@ function StitchProperties({
   const { t } = useTranslation();
   const source = objects.find(
     (object): object is PathObject =>
-      object.id === stitch.sourceObjectId && object.type !== "stitch",
+      object.id === stitch.sourceObjectId &&
+      object.type !== "stitch" &&
+      object.type !== "dimension",
   );
   const generated = generateStitch(
     source ? createPath(source, stitch.offset) : null,

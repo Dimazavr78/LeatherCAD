@@ -14,16 +14,16 @@ interface BottomBarProps {
 }
 
 export function BottomBar({
-                              zoom,
-                              cursorPosition,
-                              gridSpacing,
-                              snapEnabled,
-                              onSnapToggle,
-                              onZoomIn,
-                              onZoomOut,
-                              onResetZoom,
-                              onFit,
-                          }: BottomBarProps) {
+    zoom,
+    cursorPosition,
+    gridSpacing,
+    snapEnabled,
+    onSnapToggle,
+    onZoomIn,
+    onZoomOut,
+    onResetZoom,
+    onFit,
+}: BottomBarProps) {
     const { t } = useTranslation();
     const unit = t('common.mm');
 
@@ -31,10 +31,16 @@ export function BottomBar({
         <footer className="bottom-bar">
             <div className="coordinates">
                 <span>
-                    X: {cursorPosition ? `${cursorPosition.x.toFixed(2)} ${unit}` : '—'}
+                    X:{' '}
+                    {cursorPosition
+                        ? `${cursorPosition.x.toFixed(2)} ${unit}`
+                        : '—'}
                 </span>
                 <span>
-                    Y: {cursorPosition ? `${cursorPosition.y.toFixed(2)} ${unit}` : '—'}
+                    Y:{' '}
+                    {cursorPosition
+                        ? `${cursorPosition.y.toFixed(2)} ${unit}`
+                        : '—'}
                 </span>
                 <span>
                     {t('canvas.grid')}: {gridSpacing} {unit}
