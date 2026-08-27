@@ -39,8 +39,11 @@ interface CanvasViewProps {
     onCursorPositionChange: (position: Point | null) => void;
     onObjectCreate: (object: RectangleObject) => void;
     onObjectUpdate: (object: RectangleObject) => void;
-    onObjectDelete: (id: string) => void;
     onSelectionChange: (id: string | null) => void;
+    onInteractionStart: () => void;
+    onInteractionCommit: () => void;
+    onInteractionCancel: () => void;
+    onBusyChange: (busy: boolean) => void;
 }
 
 interface PanState {
@@ -99,8 +102,11 @@ export function CanvasView({
     onCursorPositionChange,
     onObjectCreate,
     onObjectUpdate,
-    onObjectDelete,
     onSelectionChange,
+    onInteractionStart,
+    onInteractionCommit,
+    onInteractionCancel,
+    onBusyChange,
 }: CanvasViewProps) {
     const { t } = useTranslation();
     const stageRef = useRef<HTMLDivElement>(null);
@@ -162,63 +168,39 @@ export function CanvasView({
     }, [onViewBoxChange]);
 
     useEffect(() => {
-        const releaseCapture = (pointerId: number) => {
-            const svg = svgRef.current;
+        onBusyChange(rectangleDraft !== null || interaction.type !== 'idle');
+    }, [interaction.type, onBusyChange, rectangleDraft]);
 
-            if (svg?.hasPointerCapture(pointerId)) {
-                svg.releasePointerCapture(pointerId);
+    useEffect(() => {
+        const cancelInteraction = () => {
+        const svg = svgRef.current;
+
+        if (rectangleDraft) {
+            if (svg?.hasPointerCapture(rectangleDraft.pointerId)) {
+                svg.releasePointerCapture(rectangleDraft.pointerId);
             }
+
+            setRectangleDraft(null);
+        } else if (interaction.type !== 'idle') {
+            if (svg?.hasPointerCapture(interaction.pointerId)) {
+                svg.releasePointerCapture(interaction.pointerId);
+            }
+
+            onInteractionCancel();
+            setInteraction({ type: 'idle' });
+        } else {
+            onSelectionChange(null);
+        }
         };
 
-        const handleKeyDown = (event: KeyboardEvent) => {
-            const target = event.target;
-            const isEditing =
-                target instanceof HTMLElement &&
-                (target.tagName === 'INPUT' ||
-                    target.tagName === 'TEXTAREA' ||
-                    target.isContentEditable);
-
-            if (event.key === 'Escape') {
-                if (rectangleDraft) {
-                    releaseCapture(rectangleDraft.pointerId);
-                    setRectangleDraft(null);
-                } else if (interaction.type !== 'idle') {
-                    releaseCapture(interaction.pointerId);
-                    onObjectUpdate(interaction.startObject);
-                    setInteraction({ type: 'idle' });
-                } else {
-                    onSelectionChange(null);
-                }
-
-                return;
-            }
-
-            if (
-                !isEditing &&
-                selectedObjectId &&
-                (event.key === 'Delete' || event.key === 'Backspace')
-            ) {
-                event.preventDefault();
-
-                if (interaction.type !== 'idle') {
-                    releaseCapture(interaction.pointerId);
-                    onObjectUpdate(interaction.startObject);
-                    setInteraction({ type: 'idle' });
-                } else {
-                    onObjectDelete(selectedObjectId);
-                }
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('leathercad:cancel', cancelInteraction);
+        return () =>
+            window.removeEventListener('leathercad:cancel', cancelInteraction);
     }, [
         interaction,
-        onObjectDelete,
-        onObjectUpdate,
+        onInteractionCancel,
         onSelectionChange,
         rectangleDraft,
-        selectedObjectId,
     ]);
 
     const getCanvasPoint = (clientX: number, clientY: number) => {
@@ -254,6 +236,7 @@ export function CanvasView({
 
         event.preventDefault();
         svg.setPointerCapture(event.pointerId);
+        onInteractionStart();
         setInteraction({
             type: 'move',
             objectId: rectangle.id,
@@ -281,6 +264,7 @@ export function CanvasView({
         event.preventDefault();
         event.stopPropagation();
         svg.setPointerCapture(event.pointerId);
+        onInteractionStart();
         setInteraction({
             type: 'resize',
             objectId: selectedObject.id,
@@ -431,6 +415,7 @@ export function CanvasView({
             }
 
             setInteraction({ type: 'idle' });
+            onInteractionCommit();
             return;
         }
 
@@ -470,7 +455,7 @@ export function CanvasView({
         setRectangleDraft(null);
 
         if (interaction.type !== 'idle' && interaction.pointerId === event.pointerId) {
-            onObjectUpdate(interaction.startObject);
+            onInteractionCancel();
             setInteraction({ type: 'idle' });
         }
 

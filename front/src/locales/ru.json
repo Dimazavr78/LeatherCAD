@@ -33,5 +33,13 @@
   "common": { "on": "ВКЛ", "off": "ВЫКЛ", "mm": "мм" },
   "language": { "title": "Язык", "english": "English", "russian": "Русский" },
   "panels": { "expand": "Развернуть", "collapse": "Свернуть" },
-  "ruler": { "horizontal": "Горизонтальная линейка", "vertical": "Вертикальная линейка" }
+  "ruler": { "horizontal": "Горизонтальная линейка", "vertical": "Вертикальная линейка" },
+  "actions": {
+    "undo": "Отменить",
+    "redo": "Повторить",
+    "copy": "Копировать",
+    "paste": "Вставить",
+    "duplicate": "Дублировать",
+    "delete": "Удалить"
+  }
 }

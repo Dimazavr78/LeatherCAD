@@ -5,7 +5,14 @@ import type { MenuConfig, SupportedLanguage } from '../../i18n/types';
 
 const menus = menusJson as MenuConfig[];
 
-export function TopBar() {
+interface TopBarProps {
+    canUndo: boolean;
+    canRedo: boolean;
+    onUndo: () => void;
+    onRedo: () => void;
+}
+
+export function TopBar({ canUndo, canRedo, onUndo, onRedo }: TopBarProps) {
     const { t, i18n } = useTranslation();
     const currentLanguage: SupportedLanguage =
         i18n.resolvedLanguage === 'ru' ? 'ru' : 'en';
@@ -27,6 +34,27 @@ export function TopBar() {
                     return <button key={menu.id}>{label}</button>;
                 })}
             </nav>
+
+            <div className="history-controls">
+                <button
+                    type="button"
+                    onClick={onUndo}
+                    disabled={!canUndo}
+                    title={`${t('actions.undo')} (Ctrl+Z)`}
+                    aria-label={t('actions.undo')}
+                >
+                    ↶
+                </button>
+                <button
+                    type="button"
+                    onClick={onRedo}
+                    disabled={!canRedo}
+                    title={`${t('actions.redo')} (Ctrl+Y)`}
+                    aria-label={t('actions.redo')}
+                >
+                    ↷
+                </button>
+            </div>
 
             <div className="language-control">
                 <label htmlFor="language-select">{t('language.title')}</label>

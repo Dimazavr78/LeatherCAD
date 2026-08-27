@@ -8,11 +8,17 @@ interface PropertiesPanelProps {
         id: string,
         patch: Partial<Omit<RectangleObject, 'id' | 'type'>>,
     ) => void;
+    onEditStart: () => void;
+    onEditCommit: () => void;
+    onEditCancel: () => void;
 }
 
 export function PropertiesPanel({
     selectedObject,
     onObjectChange,
+    onEditStart,
+    onEditCommit,
+    onEditCancel,
 }: PropertiesPanelProps) {
     const { t } = useTranslation();
 
@@ -26,6 +32,9 @@ export function PropertiesPanel({
                 <RectangleProperties
                     rectangle={selectedObject}
                     onObjectChange={onObjectChange}
+                    onEditStart={onEditStart}
+                    onEditCommit={onEditCommit}
+                    onEditCancel={onEditCancel}
                 />
             ) : (
                 <div className="properties-empty">
@@ -45,11 +54,17 @@ export function PropertiesPanel({
 interface RectanglePropertiesProps {
     rectangle: RectangleObject;
     onObjectChange: PropertiesPanelProps['onObjectChange'];
+    onEditStart: () => void;
+    onEditCommit: () => void;
+    onEditCancel: () => void;
 }
 
 function RectangleProperties({
     rectangle,
     onObjectChange,
+    onEditStart,
+    onEditCommit,
+    onEditCancel,
 }: RectanglePropertiesProps) {
     const { t } = useTranslation();
     const updateNumber = (
@@ -79,11 +94,17 @@ function RectangleProperties({
                     label={t('properties.fields.x')}
                     value={rectangle.x}
                     onChange={(value) => updateNumber('x', value)}
+                    onEditStart={onEditStart}
+                    onEditCommit={onEditCommit}
+                    onEditCancel={onEditCancel}
                 />
                 <NumericProperty
                     label={t('properties.fields.y')}
                     value={rectangle.y}
                     onChange={(value) => updateNumber('y', value)}
+                    onEditStart={onEditStart}
+                    onEditCommit={onEditCommit}
+                    onEditCancel={onEditCancel}
                 />
             </PropertyGroup>
             <PropertyGroup title={t('properties.sections.size').toUpperCase()}>
@@ -92,12 +113,18 @@ function RectangleProperties({
                     value={rectangle.width}
                     min={0.1}
                     onChange={(value) => updateNumber('width', value)}
+                    onEditStart={onEditStart}
+                    onEditCommit={onEditCommit}
+                    onEditCancel={onEditCancel}
                 />
                 <NumericProperty
                     label={t('properties.fields.height')}
                     value={rectangle.height}
                     min={0.1}
                     onChange={(value) => updateNumber('height', value)}
+                    onEditStart={onEditStart}
+                    onEditCommit={onEditCommit}
+                    onEditCancel={onEditCancel}
                 />
             </PropertyGroup>
         </div>
@@ -124,9 +151,20 @@ interface NumericPropertyProps {
     value: number;
     min?: number;
     onChange: (value: string) => void;
+    onEditStart: () => void;
+    onEditCommit: () => void;
+    onEditCancel: () => void;
 }
 
-function NumericProperty({ label, value, min, onChange }: NumericPropertyProps) {
+function NumericProperty({
+    label,
+    value,
+    min,
+    onChange,
+    onEditStart,
+    onEditCommit,
+    onEditCancel,
+}: NumericPropertyProps) {
     const { t } = useTranslation();
 
     return (
@@ -139,6 +177,17 @@ function NumericProperty({ label, value, min, onChange }: NumericPropertyProps) 
                     min={min}
                     step="any"
                     onChange={(event) => onChange(event.target.value)}
+                    onFocus={onEditStart}
+                    onBlur={onEditCommit}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                            event.currentTarget.blur();
+                        } else if (event.key === 'Escape') {
+                            event.preventDefault();
+                            onEditCancel();
+                            event.currentTarget.blur();
+                        }
+                    }}
                 />
                 <span>{t('common.mm')}</span>
             </div>

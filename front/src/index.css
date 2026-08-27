@@ -126,6 +126,33 @@ button {
     font-size: 12px;
 }
 
+.history-controls {
+    display: flex;
+    gap: 2px;
+    margin-left: 8px;
+}
+
+.history-controls button {
+    width: 28px;
+    height: 27px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #aeb2b9;
+    cursor: pointer;
+}
+
+.history-controls button:hover:not(:disabled) {
+    background: #2c2f34;
+    color: #f1f1f1;
+}
+
+.history-controls button:disabled {
+    color: #555a62;
+    cursor: default;
+}
+
 .language-control {
     margin-left: auto;
     display: flex;

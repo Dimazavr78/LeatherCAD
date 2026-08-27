@@ -33,5 +33,13 @@
   "common": { "on": "ON", "off": "OFF", "mm": "mm" },
   "language": { "title": "Language", "english": "English", "russian": "Russian" },
   "panels": { "expand": "Expand", "collapse": "Collapse" },
-  "ruler": { "horizontal": "Horizontal ruler", "vertical": "Vertical ruler" }
+  "ruler": { "horizontal": "Horizontal ruler", "vertical": "Vertical ruler" },
+  "actions": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "copy": "Copy",
+    "paste": "Paste",
+    "duplicate": "Duplicate",
+    "delete": "Delete"
+  }
 }
