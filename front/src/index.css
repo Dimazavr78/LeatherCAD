@@ -564,6 +564,115 @@ button {
   pointer-events: none;
 }
 
+.project-panel {
+  margin-top: 12px;
+  padding: 0 10px 12px;
+  border-top: 1px solid #34383f;
+  overflow-y: auto;
+}
+
+.project-panel section {
+  margin-top: 14px;
+}
+
+.project-row {
+  display: grid;
+  grid-template-columns: 24px 24px minmax(0, 1fr) 22px 22px;
+  gap: 2px;
+  align-items: center;
+  min-height: 27px;
+}
+
+.project-row button,
+.project-add,
+.level-breadcrumbs button {
+  color: #aeb6c0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.project-row--active {
+  background: #343941;
+}
+
+.project-row-name {
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-add {
+  padding: 7px 3px;
+}
+
+.level-path-small {
+  padding: 6px 3px;
+  color: #6f7883;
+  font-size: 10px;
+}
+
+.level-breadcrumbs {
+  position: absolute;
+  z-index: 5;
+  top: 8px;
+  left: 48px;
+  display: flex;
+  padding: 4px 6px;
+  background: rgba(21, 23, 26, 0.85);
+  border-radius: 3px;
+}
+
+.canvas-area {
+  position: relative;
+}
+
+.cad-object--related {
+  filter: drop-shadow(0 0 2px #d8b36a);
+}
+
+.cad-object--construction {
+  opacity: 0.55;
+  stroke-dasharray: 5 4;
+}
+
+.radius-handle {
+  fill: #15171a;
+  stroke: #79c8ff;
+  stroke-width: 1;
+  cursor: nwse-resize;
+}
+
+.radius-label {
+  fill: #dbe4ec;
+  paint-order: stroke;
+  stroke: #15171a;
+  stroke-width: 3px;
+  pointer-events: none;
+}
+
+.dimension-inline-input {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  color: #f2f4f7;
+  text-align: center;
+  background: #20242a;
+  border: 1px solid #79c8ff;
+}
+
+.properties-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.properties-fieldset:disabled {
+  opacity: 0.58;
+}
+
 .cad-rectangle-draft {
   fill: rgba(142, 148, 157, 0.12);
   stroke: #b8bdc5;

@@ -56,7 +56,8 @@
       "stitch": "Stitch layout",
       "holes": "Holes",
       "display": "Display",
-      "corners": "Corners"
+      "corners": "Corners",
+      "organization": "Organization"
     },
     "fields": {
       "x": "X",
@@ -122,6 +123,20 @@
       "offset-failed": "Offset cannot be built",
       "missingSource": "Missing source"
     }
+  },
+  "layers": {
+    "title": "Layers",
+    "layer": "Layer",
+    "active": "Active layer",
+    "rename": "Rename layer"
+  },
+  "levels": {
+    "title": "Levels",
+    "level": "Level",
+    "new": "New level",
+    "rename": "Rename level",
+    "open": "Open",
+    "back": "Back"
   },
   "measure": { "distance": "Distance", "angle": "Angle" },
   "canvas": {

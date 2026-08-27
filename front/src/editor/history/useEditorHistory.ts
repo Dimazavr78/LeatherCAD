@@ -1,14 +1,18 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CadObject } from '../../types/cad';
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { CadLayer, CadObject, EditorLevel } from "../../types/cad";
 
 export interface EditorDocumentState {
-    objects: CadObject[];
+  objects: CadObject[];
+  layers: CadLayer[];
+  levels: EditorLevel[];
+  activeLayerId: string;
+  currentLevelId: string;
 }
 
 interface HistoryState {
-    past: EditorDocumentState[];
-    present: EditorDocumentState;
-    future: EditorDocumentState[];
+  past: EditorDocumentState[];
+  present: EditorDocumentState;
+  future: EditorDocumentState[];
 }
 
 type StateUpdater = (state: EditorDocumentState) => EditorDocumentState;
@@ -16,123 +20,123 @@ type StateUpdater = (state: EditorDocumentState) => EditorDocumentState;
 const HISTORY_LIMIT = 100;
 
 function documentsEqual(a: EditorDocumentState, b: EditorDocumentState) {
-    return JSON.stringify(a.objects) === JSON.stringify(b.objects);
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 export function useEditorHistory(initialState: EditorDocumentState) {
-    const [history, setHistory] = useState<HistoryState>({
-        past: [],
-        present: initialState,
+  const [history, setHistory] = useState<HistoryState>({
+    past: [],
+    present: initialState,
+    future: [],
+  });
+  const transactionStartRef = useRef<EditorDocumentState | null>(null);
+  const presentRef = useRef(history.present);
+
+  useEffect(() => {
+    presentRef.current = history.present;
+  }, [history.present]);
+
+  const commitState = useCallback((update: StateUpdater) => {
+    setHistory((current) => {
+      const next = update(current.present);
+
+      if (documentsEqual(current.present, next)) {
+        return current;
+      }
+
+      return {
+        past: [...current.past, current.present].slice(-HISTORY_LIMIT),
+        present: next,
         future: [],
+      };
     });
-    const transactionStartRef = useRef<EditorDocumentState | null>(null);
-    const presentRef = useRef(history.present);
+  }, []);
 
-    useEffect(() => {
-        presentRef.current = history.present;
-    }, [history.present]);
+  const updateLiveState = useCallback((update: StateUpdater) => {
+    setHistory((current) => ({
+      ...current,
+      present: update(current.present),
+    }));
+  }, []);
 
-    const commitState = useCallback((update: StateUpdater) => {
-        setHistory((current) => {
-            const next = update(current.present);
+  const beginTransaction = useCallback(() => {
+    if (!transactionStartRef.current) {
+      transactionStartRef.current = presentRef.current;
+    }
+  }, []);
 
-            if (documentsEqual(current.present, next)) {
-                return current;
-            }
+  const commitTransaction = useCallback(() => {
+    const start = transactionStartRef.current;
+    transactionStartRef.current = null;
 
-            return {
-                past: [...current.past, current.present].slice(-HISTORY_LIMIT),
-                present: next,
-                future: [],
-            };
-        });
-    }, []);
+    if (!start) {
+      return;
+    }
 
-    const updateLiveState = useCallback((update: StateUpdater) => {
-        setHistory((current) => ({
-            ...current,
-            present: update(current.present),
-        }));
-    }, []);
+    setHistory((current) => {
+      if (documentsEqual(start, current.present)) {
+        return current;
+      }
 
-    const beginTransaction = useCallback(() => {
-        if (!transactionStartRef.current) {
-            transactionStartRef.current = presentRef.current;
-        }
-    }, []);
+      return {
+        past: [...current.past, start].slice(-HISTORY_LIMIT),
+        present: current.present,
+        future: [],
+      };
+    });
+  }, []);
 
-    const commitTransaction = useCallback(() => {
-        const start = transactionStartRef.current;
-        transactionStartRef.current = null;
+  const cancelTransaction = useCallback(() => {
+    const start = transactionStartRef.current;
+    transactionStartRef.current = null;
 
-        if (!start) {
-            return;
-        }
+    if (start) {
+      setHistory((current) => ({ ...current, present: start }));
+    }
+  }, []);
 
-        setHistory((current) => {
-            if (documentsEqual(start, current.present)) {
-                return current;
-            }
+  const undo = useCallback(() => {
+    setHistory((current) => {
+      const previous = current.past.at(-1);
 
-            return {
-                past: [...current.past, start].slice(-HISTORY_LIMIT),
-                present: current.present,
-                future: [],
-            };
-        });
-    }, []);
+      if (!previous) {
+        return current;
+      }
 
-    const cancelTransaction = useCallback(() => {
-        const start = transactionStartRef.current;
-        transactionStartRef.current = null;
+      return {
+        past: current.past.slice(0, -1),
+        present: previous,
+        future: [current.present, ...current.future],
+      };
+    });
+  }, []);
 
-        if (start) {
-            setHistory((current) => ({ ...current, present: start }));
-        }
-    }, []);
+  const redo = useCallback(() => {
+    setHistory((current) => {
+      const next = current.future[0];
 
-    const undo = useCallback(() => {
-        setHistory((current) => {
-            const previous = current.past.at(-1);
+      if (!next) {
+        return current;
+      }
 
-            if (!previous) {
-                return current;
-            }
+      return {
+        past: [...current.past, current.present].slice(-HISTORY_LIMIT),
+        present: next,
+        future: current.future.slice(1),
+      };
+    });
+  }, []);
 
-            return {
-                past: current.past.slice(0, -1),
-                present: previous,
-                future: [current.present, ...current.future],
-            };
-        });
-    }, []);
-
-    const redo = useCallback(() => {
-        setHistory((current) => {
-            const next = current.future[0];
-
-            if (!next) {
-                return current;
-            }
-
-            return {
-                past: [...current.past, current.present].slice(-HISTORY_LIMIT),
-                present: next,
-                future: current.future.slice(1),
-            };
-        });
-    }, []);
-
-    return {
-        state: history.present,
-        canUndo: history.past.length > 0,
-        canRedo: history.future.length > 0,
-        commitState,
-        updateLiveState,
-        beginTransaction,
-        commitTransaction,
-        cancelTransaction,
-        undo,
-        redo,
-    };
+  return {
+    state: history.present,
+    canUndo: history.past.length > 0,
+    canRedo: history.future.length > 0,
+    commitState,
+    updateLiveState,
+    beginTransaction,
+    commitTransaction,
+    cancelTransaction,
+    undo,
+    redo,
+  };
 }

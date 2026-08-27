@@ -1,6 +1,6 @@
 {
   "name": "leathercad",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "private": true,
   "description": "Open-source parametric CAD for leathercraft",
   "workspaces": [

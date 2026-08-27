@@ -11,6 +11,7 @@ import type {
   DimensionReference,
   PathObject,
   Point,
+  RectangleObject,
   ResizeHandle,
   Tool,
 } from "../../types/cad";
@@ -36,8 +37,10 @@ import {
 } from "./canvasMath";
 import { resizeRectangle } from "./rectangleMath";
 import { ZERO_CORNER_RADII } from "../../editor/geometry/rectangleGeometry";
+import { normalizeRectangleCornerRadii } from "../../editor/geometry/rectangleGeometry";
 import {
   getObjectAnchors,
+  driveDimensionValue,
   measurePoints,
   resolveDimensionReference,
   type SnapAnchor,
@@ -47,6 +50,10 @@ import { calculateVertexFillet } from "../../editor/geometry/pathMath";
 interface Props {
   viewBox: ViewBox;
   objects: CadObject[];
+  referenceObjects: CadObject[];
+  lockedObjectIds: Set<string>;
+  relatedObjectIds: string[];
+  constructionLayerIds: string[];
   activeTool: Tool;
   selectedObjectId: string | null;
   snapEnabled: boolean;
@@ -92,7 +99,11 @@ type EditHandle =
   | { kind: "center" }
   | { kind: "radius" }
   | { kind: "arc-start" }
-  | { kind: "arc-end" };
+  | { kind: "arc-end" }
+  | {
+      kind: "corner-radius";
+      corner: keyof Extract<PathObject, { type: "rectangle" }>["cornerRadii"];
+    };
 type Interaction =
   | { type: "idle" }
   | {
@@ -104,6 +115,7 @@ type Interaction =
   | {
       type: "handle";
       pointerId: number;
+      startPointer: Point;
       startObject: PathObject;
       handle: EditHandle;
     };
@@ -146,6 +158,9 @@ export function CanvasView(props: Props) {
   );
   const [measureDraft, setMeasureDraft] = useState<MeasureDraft | null>(null);
   const [snapMarker, setSnapMarker] = useState<SnapAnchor | null>(null);
+  const [editingDimensionId, setEditingDimensionId] = useState<string | null>(
+    null,
+  );
   const selected =
     objects.find((object) => object.id === selectedObjectId) ?? null;
   const zoom = calculateZoomPercent(viewBox);
@@ -362,7 +377,8 @@ export function CanvasView(props: Props) {
   };
 
   const startMove = (event: PointerEvent<SVGElement>, object: CadObject) => {
-    if (object.type === "stitch") return;
+    if (object.type === "stitch" || props.lockedObjectIds.has(object.id))
+      return;
     const point = canvasPoint(event.clientX, event.clientY);
     const svg = svgRef.current;
     if (!point || !svg) return;
@@ -382,7 +398,8 @@ export function CanvasView(props: Props) {
     handle: EditHandle,
   ) => {
     const svg = svgRef.current;
-    if (!svg || event.button !== 0) return;
+    const point = canvasPoint(event.clientX, event.clientY);
+    if (!svg || !point || event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
     svg.setPointerCapture(event.pointerId);
@@ -390,6 +407,7 @@ export function CanvasView(props: Props) {
     setInteraction({
       type: "handle",
       pointerId: event.pointerId,
+      startPointer: point,
       startObject: object,
       handle,
     });
@@ -400,6 +418,35 @@ export function CanvasView(props: Props) {
     handle: EditHandle,
     point: Point,
   ): PathObject => {
+    if (object.type === "rectangle" && handle.kind === "corner-radius") {
+      const right = object.x + object.width;
+      const bottom = object.y + object.height;
+      const raw =
+        handle.corner === "topLeft"
+          ? (point.x - object.x + (point.y - object.y)) / 2
+          : handle.corner === "topRight"
+            ? (right - point.x + (point.y - object.y)) / 2
+            : handle.corner === "bottomRight"
+              ? (right - point.x + (bottom - point.y)) / 2
+              : (point.x - object.x + (bottom - point.y)) / 2;
+      const radius = Math.max(0, Math.round(raw * 2) / 2);
+      const requested = object.linkCorners
+        ? {
+            topLeft: radius,
+            topRight: radius,
+            bottomRight: radius,
+            bottomLeft: radius,
+          }
+        : { ...object.cornerRadii, [handle.corner]: radius };
+      return {
+        ...object,
+        cornerRadii: normalizeRectangleCornerRadii(
+          object.width,
+          object.height,
+          requested,
+        ),
+      };
+    }
     if (object.type === "rectangle" && handle.kind === "rectangle")
       return resizeRectangle(object, handle.handle, point, {
         snapEnabled,
@@ -618,7 +665,43 @@ export function CanvasView(props: Props) {
             ),
           );
         }
-      else
+      else if (
+        interaction.startObject.type === "rectangle" &&
+        interaction.handle.kind === "corner-radius"
+      ) {
+        const rectangle = interaction.startObject;
+        const corner = interaction.handle.corner;
+        const direction = {
+          topLeft: { x: 1, y: 1 },
+          topRight: { x: -1, y: 1 },
+          bottomRight: { x: -1, y: -1 },
+          bottomLeft: { x: 1, y: -1 },
+        }[corner];
+        const delta =
+          ((point.x - interaction.startPointer.x) * direction.x +
+            (point.y - interaction.startPointer.y) * direction.y) /
+          2;
+        const radius = Math.max(
+          0,
+          Math.round((rectangle.cornerRadii[corner] + delta) * 2) / 2,
+        );
+        const requested = rectangle.linkCorners
+          ? {
+              topLeft: radius,
+              topRight: radius,
+              bottomRight: radius,
+              bottomLeft: radius,
+            }
+          : { ...rectangle.cornerRadii, [corner]: radius };
+        props.onObjectUpdate({
+          ...rectangle,
+          cornerRadii: normalizeRectangleCornerRadii(
+            rectangle.width,
+            rectangle.height,
+            requested,
+          ),
+        });
+      } else
         props.onObjectUpdate(
           updateHandle(interaction.startObject, interaction.handle, point),
         );
@@ -680,6 +763,7 @@ export function CanvasView(props: Props) {
   };
 
   const selectObject = (id: string) => {
+    if (props.lockedObjectIds.has(id)) return;
     const source = objects.find((object) => object.id === id);
     if (
       activeTool === "stitch" &&
@@ -706,6 +790,35 @@ export function CanvasView(props: Props) {
       return;
     }
     props.onSelectionChange(id);
+  };
+  const commitDimensionValue = (
+    dimensionId: string,
+    requestedValue: number,
+  ) => {
+    setEditingDimensionId(null);
+    if (!Number.isFinite(requestedValue) || requestedValue <= 0) return;
+    const dimension = props.referenceObjects.find(
+      (object) => object.id === dimensionId,
+    );
+    if (
+      !dimension ||
+      dimension.type !== "dimension" ||
+      !dimension.referenceA.objectId
+    )
+      return;
+    const source = props.referenceObjects.find(
+      (object) => object.id === dimension.referenceA.objectId,
+    );
+    if (!source || source.type === "stitch" || source.type === "dimension")
+      return;
+    if (props.lockedObjectIds.has(source.id)) return;
+    const updated = driveDimensionValue(
+      dimension,
+      source,
+      props.referenceObjects,
+      requestedValue,
+    );
+    if (updated) props.onObjectCommit(updated);
   };
   const previewStitch: CadObject | null =
     activeTool === "stitch" && stitchPreviewSourceId
@@ -809,9 +922,21 @@ export function CanvasView(props: Props) {
             <CadObjectRenderer
               key={object.id}
               object={object}
-              objects={objects}
+              objects={props.referenceObjects}
               activeTool={activeTool}
               selected={object.id === selectedObjectId}
+              related={props.relatedObjectIds.includes(object.id)}
+              construction={props.constructionLayerIds.includes(
+                object.layerId ?? "",
+              )}
+              editingDimensionId={editingDimensionId}
+              onDimensionEditStart={
+                props.lockedObjectIds.has(object.id)
+                  ? undefined
+                  : setEditingDimensionId
+              }
+              onDimensionEditCommit={commitDimensionValue}
+              onDimensionEditCancel={() => setEditingDimensionId(null)}
               screenUnit={screenUnit}
               onSelect={selectObject}
               onMoveStart={startMove}
@@ -824,9 +949,10 @@ export function CanvasView(props: Props) {
             <g className="stitch-preview">
               <CadObjectRenderer
                 object={previewStitch}
-                objects={objects}
+                objects={props.referenceObjects}
                 activeTool={activeTool}
                 selected={false}
+                related={false}
                 screenUnit={screenUnit}
                 onSelect={() => undefined}
                 onMoveStart={() => undefined}
@@ -834,14 +960,32 @@ export function CanvasView(props: Props) {
             </g>
           )}
           {activeTool === "select" && selected?.type === "rectangle" && (
-            <SelectionOverlay
-              rectangle={selected}
-              screenUnit={screenUnit}
-              showDimensions={interaction.type === "handle"}
-              onResizeStart={(event, handle) =>
-                startHandle(event, selected, { kind: "rectangle", handle })
-              }
-            />
+            <>
+              <SelectionOverlay
+                rectangle={selected}
+                screenUnit={screenUnit}
+                showDimensions={interaction.type === "handle"}
+                onResizeStart={(event, handle) =>
+                  startHandle(event, selected, { kind: "rectangle", handle })
+                }
+              />
+              <RadiusHandles
+                rectangle={selected}
+                unit={screenUnit}
+                activeCorner={
+                  interaction.type === "handle" &&
+                  interaction.handle.kind === "corner-radius"
+                    ? interaction.handle.corner
+                    : null
+                }
+                onStart={(event, corner) =>
+                  startHandle(event, selected, {
+                    kind: "corner-radius",
+                    corner,
+                  })
+                }
+              />
+            </>
           )}
           {activeTool === "select" &&
             selected &&
@@ -942,6 +1086,81 @@ export function CanvasView(props: Props) {
           })()}
       </div>
     </div>
+  );
+}
+
+function RadiusHandles({
+  rectangle,
+  unit,
+  activeCorner,
+  onStart,
+}: {
+  rectangle: RectangleObject;
+  unit: number;
+  activeCorner: keyof RectangleObject["cornerRadii"] | null;
+  onStart: (
+    event: PointerEvent<SVGElement>,
+    corner: keyof RectangleObject["cornerRadii"],
+  ) => void;
+}) {
+  const { t } = useTranslation();
+  const inset = (radius: number) => Math.max(radius, 10 * unit);
+  const handles = [
+    {
+      corner: "topLeft" as const,
+      x: rectangle.x + inset(rectangle.cornerRadii.topLeft),
+      y: rectangle.y + inset(rectangle.cornerRadii.topLeft),
+    },
+    {
+      corner: "topRight" as const,
+      x: rectangle.x + rectangle.width - inset(rectangle.cornerRadii.topRight),
+      y: rectangle.y + inset(rectangle.cornerRadii.topRight),
+    },
+    {
+      corner: "bottomRight" as const,
+      x:
+        rectangle.x +
+        rectangle.width -
+        inset(rectangle.cornerRadii.bottomRight),
+      y:
+        rectangle.y +
+        rectangle.height -
+        inset(rectangle.cornerRadii.bottomRight),
+    },
+    {
+      corner: "bottomLeft" as const,
+      x: rectangle.x + inset(rectangle.cornerRadii.bottomLeft),
+      y:
+        rectangle.y +
+        rectangle.height -
+        inset(rectangle.cornerRadii.bottomLeft),
+    },
+  ];
+  return (
+    <g>
+      {handles.map((handle) => (
+        <g key={handle.corner}>
+          <circle
+            className="radius-handle"
+            cx={handle.x}
+            cy={handle.y}
+            r={4 * unit}
+            onPointerDown={(event) => onStart(event, handle.corner)}
+          />
+          {activeCorner === handle.corner && (
+            <text
+              className="radius-label"
+              x={handle.x + 8 * unit}
+              y={handle.y - 8 * unit}
+              fontSize={11 * unit}
+            >
+              R {rectangle.cornerRadii[handle.corner].toFixed(2)}{" "}
+              {t("common.mm")}
+            </text>
+          )}
+        </g>
+      ))}
+    </g>
   );
 }
 

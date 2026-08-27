@@ -7,7 +7,11 @@ import type {
   RectangleObject,
   StitchObject,
 } from "../../types/cad";
-import { getDimensionValue, measurePoints } from "../dimensions/dimensionMath";
+import {
+  driveDimensionValue,
+  getDimensionValue,
+  measurePoints,
+} from "../dimensions/dimensionMath";
 import { createPath, getPathLength, calculateVertexFillet } from "./pathMath";
 import {
   getRectanglePerimeter,
@@ -135,6 +139,8 @@ test("horizontal, vertical and aligned dimensions update from references", () =>
     Math.hypot(100, 70),
   );
   assert.equal(getDimensionValue(base, [{ ...source, width: 150 }]), 150);
+  const driven = driveDimensionValue(base, source, [source, base], 150);
+  assert.equal(driven?.type === "rectangle" ? driven.width : 0, 150);
 });
 
 test("circle radius/diameter and arc length dimensions are exact", () => {

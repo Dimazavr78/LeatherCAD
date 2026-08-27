@@ -18,10 +18,16 @@ interface Props {
   objects: CadObject[];
   activeTool: Tool;
   selected: boolean;
+  related: boolean;
+  construction?: boolean;
   screenUnit: number;
   onSelect: (id: string) => void;
   onMoveStart: (event: PointerEvent<SVGElement>, object: CadObject) => void;
   onHover?: (id: string | null) => void;
+  editingDimensionId?: string | null;
+  onDimensionEditStart?: (id: string) => void;
+  onDimensionEditCommit?: (id: string, value: number) => void;
+  onDimensionEditCancel?: () => void;
 }
 
 function pathData(object: PathObject): string {
@@ -33,10 +39,16 @@ export function CadObjectRenderer({
   objects,
   activeTool,
   selected,
+  related,
+  construction,
   screenUnit,
   onSelect,
   onMoveStart,
   onHover,
+  editingDimensionId,
+  onDimensionEditStart,
+  onDimensionEditCommit,
+  onDimensionEditCancel,
 }: Props) {
   const pointerDown = (event: PointerEvent<SVGElement>) => {
     if (event.button !== 0) return;
@@ -51,7 +63,7 @@ export function CadObjectRenderer({
     if (activeTool === "select" && object.type !== "stitch")
       onMoveStart(event, object);
   };
-  const className = `cad-object cad-object--${object.type}${selected ? " cad-object--selected" : ""}`;
+  const className = `cad-object cad-object--${object.type}${selected ? " cad-object--selected" : ""}${related ? " cad-object--related" : ""}${construction ? " cad-object--construction" : ""}`;
   if (object.type === "stitch")
     return (
       <StitchRenderer
@@ -69,6 +81,10 @@ export function CadObjectRenderer({
         screenUnit={screenUnit}
         className={className}
         onPointerDown={pointerDown}
+        editing={editingDimensionId === object.id}
+        onEditStart={onDimensionEditStart}
+        onEditCommit={onDimensionEditCommit}
+        onEditCancel={onDimensionEditCancel}
       />
     );
   const hover = {
@@ -120,12 +136,20 @@ function DimensionRenderer({
   screenUnit,
   className,
   onPointerDown,
+  editing,
+  onEditStart,
+  onEditCommit,
+  onEditCancel,
 }: {
   dimension: Extract<CadObject, { type: "dimension" }>;
   objects: CadObject[];
   screenUnit: number;
   className: string;
   onPointerDown: (event: PointerEvent<SVGElement>) => void;
+  editing: boolean;
+  onEditStart?: (id: string) => void;
+  onEditCommit?: (id: string, value: number) => void;
+  onEditCancel?: () => void;
 }) {
   const a = resolveDimensionReference(dimension.referenceA, objects);
   const radial = getRadialEnd(dimension, objects);
@@ -212,15 +236,43 @@ function DimensionRenderer({
         cy={lineB.y}
         r={arrow / 2}
       />
-      <text
-        className="dimension-text"
-        x={mid.x}
-        y={mid.y - 6 * screenUnit}
-        fontSize={11 * screenUnit}
-        textAnchor="middle"
-      >
-        {label}
-      </text>
+      {editing ? (
+        <foreignObject
+          x={mid.x - 45 * screenUnit}
+          y={mid.y - 25 * screenUnit}
+          width={90 * screenUnit}
+          height={24 * screenUnit}
+        >
+          <input
+            autoFocus
+            className="dimension-inline-input"
+            defaultValue={value}
+            onPointerDown={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === "Enter")
+                onEditCommit?.(dimension.id, Number(event.currentTarget.value));
+              else if (event.key === "Escape") onEditCancel?.();
+            }}
+            onBlur={(event) =>
+              onEditCommit?.(dimension.id, Number(event.currentTarget.value))
+            }
+          />
+        </foreignObject>
+      ) : (
+        <text
+          className="dimension-text"
+          x={mid.x}
+          y={mid.y - 6 * screenUnit}
+          fontSize={11 * screenUnit}
+          textAnchor="middle"
+          onDoubleClick={(event) => {
+            event.stopPropagation();
+            onEditStart?.(dimension.id);
+          }}
+        >
+          {label}
+        </text>
+      )}
     </g>
   );
 }

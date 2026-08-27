@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type {
+  CadLayer,
   CadObject,
   DimensionObject,
+  EditorLevel,
   PathObject,
   StitchObject,
 } from "../../types/cad";
@@ -18,6 +20,9 @@ import { normalizeRectangleCornerRadii } from "../../editor/geometry/rectangleGe
 interface Props {
   selectedObject: CadObject | null;
   objects: CadObject[];
+  layers: CadLayer[];
+  levels: EditorLevel[];
+  readOnly: boolean;
   onObjectChange: (id: string, patch: Partial<CadObject>) => void;
   onEditStart: () => void;
   onEditCommit: () => void;
@@ -32,7 +37,9 @@ export function PropertiesPanel(props: Props) {
         <span>{t("properties.title").toUpperCase()}</span>
       </div>
       {props.selectedObject ? (
-        <ObjectProperties {...props} selectedObject={props.selectedObject} />
+        <fieldset className="properties-fieldset" disabled={props.readOnly}>
+          <ObjectProperties {...props} selectedObject={props.selectedObject} />
+        </fieldset>
       ) : (
         <div className="properties-empty">
           <div className="properties-empty-icon">◇</div>
@@ -51,6 +58,8 @@ export function PropertiesPanel(props: Props) {
 function ObjectProperties({
   selectedObject: object,
   objects,
+  layers,
+  levels,
   onObjectChange,
   ...events
 }: Props & { selectedObject: CadObject }) {
@@ -329,6 +338,44 @@ function ObjectProperties({
       <div className="properties-object-type">
         {t(`properties.${object.type}.title`).toUpperCase()}
       </div>
+      <Group title={t("properties.sections.organization")}>
+        <label className="property-field">
+          <span>{t("layers.layer")}</span>
+          <select
+            className="property-select"
+            value={object.layerId ?? ""}
+            onFocus={events.onEditStart}
+            onChange={(event) =>
+              onObjectChange(object.id, { layerId: event.target.value })
+            }
+            onBlur={events.onEditCommit}
+          >
+            {layers.map((layer) => (
+              <option key={layer.id} value={layer.id}>
+                {layer.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="property-field">
+          <span>{t("levels.level")}</span>
+          <select
+            className="property-select"
+            value={object.levelId ?? ""}
+            onFocus={events.onEditStart}
+            onChange={(event) =>
+              onObjectChange(object.id, { levelId: event.target.value })
+            }
+            onBlur={events.onEditCommit}
+          >
+            {levels.map((level) => (
+              <option key={level.id} value={level.id}>
+                {level.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </Group>
       {body}
     </div>
   );

@@ -22,11 +22,18 @@ import {
   useEditorShortcuts,
   type NudgeDirection,
 } from "../../editor/useEditorShortcuts";
-import type { CadObject, Tool } from "../../types/cad";
+import type { CadLayer, CadObject, EditorLevel, Tool } from "../../types/cad";
 import { normalizedRectangle } from "../../editor/geometry/rectangleGeometry";
 import { dependsOnObject } from "../../editor/dependencies";
 import { BottomBar } from "./BottomBar";
 import { TopBar } from "./TopBar";
+import {
+  DEFAULT_LAYERS,
+  ROOT_LEVEL,
+  getAutomaticLayerId,
+  getLevelPath,
+} from "../../editor/projectModel";
+import { ProjectPanel } from "../Project/ProjectPanel";
 
 const PASTE_OFFSET = 10;
 const NUDGE_SMALL = 1;
@@ -45,8 +52,16 @@ export function AppShell() {
     cancelTransaction,
     undo,
     redo,
-  } = useEditorHistory({ objects: [] });
+  } = useEditorHistory({
+    objects: [],
+    layers: DEFAULT_LAYERS,
+    levels: [ROOT_LEVEL],
+    activeLayerId: DEFAULT_LAYERS[0].id,
+    currentLevelId: ROOT_LEVEL.id,
+  });
   const objects = state.objects;
+  const layers = state.layers;
+  const levels = state.levels;
   const [activeTool, setActiveTool] = useState<Tool>("select");
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const [clipboard, setClipboard] = useState<CadObject[]>([]);
@@ -61,6 +76,42 @@ export function AppShell() {
   const gridSpacing = getGridSpacing(zoom);
   const selectedObject =
     objects.find((object) => object.id === selectedObjectId) ?? null;
+  const layerById = useMemo(
+    () => new Map(layers.map((layer) => [layer.id, layer])),
+    [layers],
+  );
+  const visibleObjects = objects
+    .filter(
+      (object) =>
+        object.levelId === state.currentLevelId &&
+        (layerById.get(object.layerId ?? "")?.visible ?? true),
+    )
+    .sort(
+      (a, b) =>
+        (layerById.get(a.layerId ?? "")?.order ?? 0) -
+        (layerById.get(b.layerId ?? "")?.order ?? 0),
+    );
+  const lockedObjectIds = useMemo(
+    () =>
+      new Set(
+        objects
+          .filter((object) => layerById.get(object.layerId ?? "")?.locked)
+          .map((object) => object.id),
+      ),
+    [layerById, objects],
+  );
+  const selectedLocked = selectedObject
+    ? lockedObjectIds.has(selectedObject.id)
+    : false;
+  const relatedObjectIds = selectedObject
+    ? objects
+        .filter(
+          (object) =>
+            dependsOnObject(object, selectedObject.id) ||
+            dependsOnObject(selectedObject, object.id),
+        )
+        .map((object) => object.id)
+    : [];
 
   const requestCancel = useCallback(() => {
     window.dispatchEvent(new Event("leathercad:cancel"));
@@ -68,17 +119,24 @@ export function AppShell() {
 
   const addObject = useCallback(
     (object: CadObject) => {
+      const assignedObject = {
+        ...object,
+        layerId: getAutomaticLayerId(object, state.activeLayerId),
+        levelId: state.currentLevelId,
+      } as CadObject;
       commitState((document) => ({
-        objects: [...document.objects, object],
+        ...document,
+        objects: [...document.objects, assignedObject],
       }));
-      setSelectedObjectId(object.id);
+      setSelectedObjectId(assignedObject.id);
     },
-    [commitState],
+    [commitState, state.activeLayerId, state.currentLevelId],
   );
 
   const updateObject = useCallback(
     (id: string, patch: Partial<CadObject>) => {
       updateLiveState((document) => ({
+        ...document,
         objects: document.objects.map((object) => {
           if (object.id !== id) return object;
           const updated = { ...object, ...patch } as CadObject;
@@ -94,6 +152,7 @@ export function AppShell() {
   const replaceObject = useCallback(
     (updatedObject: CadObject) => {
       updateLiveState((document) => ({
+        ...document,
         objects: document.objects.map((object) =>
           object.id === updatedObject.id ? updatedObject : object,
         ),
@@ -105,6 +164,7 @@ export function AppShell() {
   const commitObject = useCallback(
     (updatedObject: CadObject) => {
       commitState((document) => ({
+        ...document,
         objects: document.objects.map((object) =>
           object.id === updatedObject.id ? updatedObject : object,
         ),
@@ -119,11 +179,12 @@ export function AppShell() {
       return;
     }
 
-    if (!selectedObjectId) {
+    if (!selectedObjectId || lockedObjectIds.has(selectedObjectId)) {
       return;
     }
 
     commitState((document) => ({
+      ...document,
       objects: document.objects.filter(
         (object) =>
           object.id !== selectedObjectId &&
@@ -131,7 +192,13 @@ export function AppShell() {
       ),
     }));
     setSelectedObjectId(null);
-  }, [canvasBusy, commitState, requestCancel, selectedObjectId]);
+  }, [
+    canvasBusy,
+    commitState,
+    lockedObjectIds,
+    requestCancel,
+    selectedObjectId,
+  ]);
 
   const undoAction = useCallback(() => {
     if (canvasBusy) {
@@ -169,18 +236,20 @@ export function AppShell() {
 
     pasteCountRef.current += 1;
     const offset = PASTE_OFFSET * pasteCountRef.current;
-    const pastedObjects = clipboard.map((object) =>
-      cloneCadObjectWithOffset(object, offset),
-    );
+    const pastedObjects = clipboard.map((object) => ({
+      ...cloneCadObjectWithOffset(object, offset),
+      levelId: state.currentLevelId,
+    }));
 
     commitState((document) => ({
+      ...document,
       objects: [...document.objects, ...pastedObjects],
     }));
     setSelectedObjectId(pastedObjects.at(-1)?.id ?? null);
-  }, [clipboard, commitState]);
+  }, [clipboard, commitState, state.currentLevelId]);
 
   const duplicate = useCallback(() => {
-    if (!selectedObject) {
+    if (!selectedObject || selectedLocked) {
       return;
     }
 
@@ -189,14 +258,15 @@ export function AppShell() {
       PASTE_OFFSET,
     );
     commitState((document) => ({
+      ...document,
       objects: [...document.objects, duplicateObject],
     }));
     setSelectedObjectId(duplicateObject.id);
-  }, [commitState, selectedObject]);
+  }, [commitState, selectedLocked, selectedObject]);
 
   const nudge = useCallback(
     (direction: NudgeDirection, largeStep: boolean) => {
-      if (activeTool !== "select" || !selectedObject) {
+      if (activeTool !== "select" || !selectedObject || selectedLocked) {
         return;
       }
 
@@ -208,12 +278,13 @@ export function AppShell() {
       const movedObject = translateCadObject(selectedObject, deltaX, deltaY);
 
       commitState((document) => ({
+        ...document,
         objects: document.objects.map((object) =>
           object.id === movedObject.id ? movedObject : object,
         ),
       }));
     },
-    [activeTool, commitState, selectedObject],
+    [activeTool, commitState, selectedLocked, selectedObject],
   );
 
   const shortcutActions = useMemo(
@@ -250,6 +321,24 @@ export function AppShell() {
     );
   };
 
+  const setLayers = (nextLayers: CadLayer[]) => {
+    commitState((document) => ({ ...document, layers: nextLayers }));
+    if (
+      selectedObject &&
+      !nextLayers.find((layer) => layer.id === selectedObject.layerId)?.visible
+    )
+      setSelectedObjectId(null);
+  };
+  const setLevels = (nextLevels: EditorLevel[]) =>
+    commitState((document) => ({ ...document, levels: nextLevels }));
+  const setActiveLayer = (activeLayerId: string) =>
+    commitState((document) => ({ ...document, activeLayerId }));
+  const setCurrentLevel = (currentLevelId: string) => {
+    commitState((document) => ({ ...document, currentLevelId }));
+    setSelectedObjectId(null);
+  };
+  const levelPath = getLevelPath(levels, state.currentLevelId);
+
   return (
     <div className="app-shell">
       <TopBar
@@ -266,7 +355,22 @@ export function AppShell() {
           }`}
         >
           {!leftCollapsed && (
-            <LeftToolbar activeTool={activeTool} onToolChange={setActiveTool} />
+            <>
+              <LeftToolbar
+                activeTool={activeTool}
+                onToolChange={setActiveTool}
+              />
+              <ProjectPanel
+                layers={layers}
+                levels={levels}
+                activeLayerId={state.activeLayerId}
+                currentLevelId={state.currentLevelId}
+                onLayersChange={setLayers}
+                onActiveLayerChange={setActiveLayer}
+                onLevelsChange={setLevels}
+                onCurrentLevelChange={setCurrentLevel}
+              />
+            </>
           )}
           <button
             className="panel-collapse-button panel-collapse-button--left"
@@ -278,9 +382,25 @@ export function AppShell() {
         </aside>
 
         <main className="canvas-area">
+          <nav className="level-breadcrumbs">
+            {levelPath.map((level, index) => (
+              <button key={level.id} onClick={() => setCurrentLevel(level.id)}>
+                {index > 0 && "› "}
+                {level.name}
+              </button>
+            ))}
+          </nav>
           <CanvasView
             viewBox={viewBox}
-            objects={objects}
+            objects={visibleObjects}
+            referenceObjects={objects.filter(
+              (object) => object.levelId === state.currentLevelId,
+            )}
+            lockedObjectIds={lockedObjectIds}
+            relatedObjectIds={relatedObjectIds}
+            constructionLayerIds={layers
+              .filter((layer) => layer.type === "construction")
+              .map((layer) => layer.id)}
             activeTool={activeTool}
             selectedObjectId={selectedObjectId}
             snapEnabled={snapEnabled}
@@ -314,6 +434,9 @@ export function AppShell() {
             <PropertiesPanel
               selectedObject={selectedObject}
               objects={objects}
+              layers={layers}
+              levels={levels}
+              readOnly={selectedLocked}
               onObjectChange={updateObject}
               onEditStart={beginTransaction}
               onEditCommit={commitTransaction}

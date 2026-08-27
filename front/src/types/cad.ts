@@ -3,6 +3,11 @@ export interface Point {
   y: number;
 }
 
+export interface CadObjectMetadata {
+  layerId?: string;
+  levelId?: string;
+}
+
 export interface RectangleCornerRadii {
   topLeft: number;
   topRight: number;
@@ -10,7 +15,7 @@ export interface RectangleCornerRadii {
   bottomLeft: number;
 }
 
-export interface RectangleObject {
+export interface RectangleObject extends CadObjectMetadata {
   id: string;
   type: "rectangle";
   x: number;
@@ -21,7 +26,7 @@ export interface RectangleObject {
   linkCorners: boolean;
 }
 
-export interface LineObject {
+export interface LineObject extends CadObjectMetadata {
   id: string;
   type: "line";
   x1: number;
@@ -33,20 +38,20 @@ export interface PolylineVertex extends Point {
   cornerRadius?: number;
 }
 
-export interface PolylineObject {
+export interface PolylineObject extends CadObjectMetadata {
   id: string;
   type: "polyline";
   points: PolylineVertex[];
   closed: boolean;
 }
-export interface CircleObject {
+export interface CircleObject extends CadObjectMetadata {
   id: string;
   type: "circle";
   cx: number;
   cy: number;
   radius: number;
 }
-export interface ArcObject {
+export interface ArcObject extends CadObjectMetadata {
   id: string;
   type: "arc";
   cx: number;
@@ -59,7 +64,7 @@ export type HoleShape = "round" | "diamond" | "slit";
 export type StitchMode = "fixed-spacing" | "fit-evenly" | "adaptive";
 export type StitchAlignment = "start" | "center" | "corners";
 export type StitchCornerMode = "continuous" | "corner-first" | "adaptive";
-export interface StitchObject {
+export interface StitchObject extends CadObjectMetadata {
   id: string;
   type: "stitch";
   sourceObjectId: string;
@@ -93,7 +98,7 @@ export interface DimensionReference {
   vertexIndex?: number;
   point?: Point;
 }
-export interface DimensionObject {
+export interface DimensionObject extends CadObjectMetadata {
   id: string;
   type: "dimension";
   dimensionType: DimensionType;
@@ -102,6 +107,21 @@ export interface DimensionObject {
   offset: number;
   precision: number;
   showUnit: boolean;
+}
+
+export interface CadLayer {
+  id: string;
+  name: string;
+  visible: boolean;
+  locked: boolean;
+  order: number;
+  type: "normal" | "construction" | "annotation";
+}
+
+export interface EditorLevel {
+  id: string;
+  name: string;
+  parentId: string | null;
 }
 export type PathObject =
   RectangleObject | LineObject | PolylineObject | CircleObject | ArcObject;
