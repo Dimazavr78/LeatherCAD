@@ -9,9 +9,16 @@
   },
   "toolbar": {
     "sections": { "tools": "Инструменты", "leather": "Кожа" },
-    "select": { "label": "Выбор", "tooltip": "Выбор и редактирование объектов" },
+    "select": {
+      "label": "Выбор",
+      "tooltip": "Выбор и редактирование объектов"
+    },
     "line": { "label": "Линия", "tooltip": "Создать линию" },
-    "rectangle": { "label": "Прямоугольник", "tooltip": "Создать прямоугольник" },
+    "polyline": { "label": "Полилиния", "tooltip": "Создать составной путь" },
+    "rectangle": {
+      "label": "Прямоугольник",
+      "tooltip": "Создать прямоугольник"
+    },
     "circle": { "label": "Окружность", "tooltip": "Создать окружность" },
     "arc": { "label": "Дуга", "tooltip": "Создать дугу" },
     "part": { "label": "Деталь", "tooltip": "Деталь из кожи" },
@@ -25,15 +32,85 @@
     "nothingSelected": "Ничего не выбрано",
     "nothingSelectedDescription": "Выберите объект на рабочем поле, чтобы увидеть его свойства.",
     "rectangle": { "title": "Прямоугольник" },
-    "sections": { "position": "Положение", "size": "Размер" },
-    "fields": { "x": "X", "y": "Y", "width": "Ширина", "height": "Высота" }
+    "line": { "title": "Линия" },
+    "polyline": { "title": "Полилиния" },
+    "circle": { "title": "Окружность" },
+    "arc": { "title": "Дуга" },
+    "stitch": { "title": "Шов" },
+    "sections": {
+      "position": "Положение",
+      "size": "Размер",
+      "start": "Начало",
+      "end": "Конец",
+      "center": "Центр",
+      "geometry": "Геометрия",
+      "stitch": "Параметры шва",
+      "holes": "Отверстия",
+      "display": "Отображение"
+    },
+    "fields": {
+      "x": "X",
+      "y": "Y",
+      "width": "Ширина",
+      "height": "Высота",
+      "length": "Длина",
+      "angle": "Угол",
+      "vertices": "Вершины",
+      "closed": "Замкнута",
+      "radius": "Радиус",
+      "diameter": "Диаметр",
+      "circumference": "Длина окружности",
+      "startAngle": "Начальный угол",
+      "endAngle": "Конечный угол",
+      "sweepAngle": "Угол дуги",
+      "arcLength": "Длина дуги",
+      "source": "Источник",
+      "offset": "Смещение от края",
+      "spacing": "Желаемый шаг",
+      "actualSpacing": "Фактический шаг",
+      "mode": "Режим",
+      "alignment": "Выравнивание",
+      "holeShape": "Форма отверстия",
+      "holeSize": "Размер отверстия",
+      "holeAngle": "Угол отверстия",
+      "holes": "Количество отверстий",
+      "showLine": "Показывать линию шва",
+      "showHoles": "Показывать отверстия"
+    },
+    "options": {
+      "fixed-spacing": "Фиксированный шаг",
+      "fit-evenly": "Распределить равномерно",
+      "adaptive": "Адаптивный",
+      "start": "От начала",
+      "center": "По центру",
+      "corners": "По углам",
+      "round": "Круг",
+      "diamond": "Ромб",
+      "slit": "Прорезь",
+      "follow-path": "По направлению пути",
+      "45": "45°"
+    },
+    "warnings": {
+      "spacing-deviation": "Значительное изменение шага",
+      "too-small-path": "Путь слишком мал",
+      "offset-failed": "Не удалось построить отступ",
+      "missingSource": "Источник отсутствует"
+    }
   },
-  "canvas": { "title": "Холст", "grid": "Сетка", "snap": "Привязка", "objects": "Объекты" },
+  "canvas": {
+    "title": "Холст",
+    "grid": "Сетка",
+    "snap": "Привязка",
+    "objects": "Объекты"
+  },
   "zoom": { "fit": "Вписать", "in": "Увеличить", "out": "Уменьшить" },
   "common": { "on": "ВКЛ", "off": "ВЫКЛ", "mm": "мм" },
   "language": { "title": "Язык", "english": "English", "russian": "Русский" },
   "panels": { "expand": "Развернуть", "collapse": "Свернуть" },
-  "ruler": { "horizontal": "Горизонтальная линейка", "vertical": "Вертикальная линейка" },
+  "ruler": {
+    "horizontal": "Горизонтальная линейка",
+    "vertical": "Вертикальная линейка"
+  },
   "actions": {
     "undo": "Отменить",
     "redo": "Повторить",
