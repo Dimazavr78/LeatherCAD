@@ -48,6 +48,12 @@ import {
   resolveDimensionReference,
   type SnapAnchor,
 } from "../../editor/dimensions/dimensionMath";
+import {
+  getObjectBounds,
+  isPointInHost,
+  moveHole,
+  resolveHoleCenter,
+} from "../../editor/holes/holeGeometry";
 import { calculateVertexFillet } from "../../editor/geometry/pathMath";
 
 interface Props {
@@ -113,7 +119,8 @@ type Interaction =
       type: "move";
       pointerId: number;
       startPointer: Point;
-      startObject: PathObject | Extract<CadObject, { type: "dimension" }>;
+      startObject:
+        PathObject | Extract<CadObject, { type: "dimension" | "hole" }>;
     }
   | {
       type: "handle";
@@ -599,6 +606,31 @@ export function CanvasView(props: Props) {
       else setMeasureDraft({ ...measureDraft, end: point, complete: true });
       return;
     }
+    if (activeTool === "hole") {
+      const host = [...objects]
+        .reverse()
+        .find((object) => isPointInHost(raw, object));
+      if (!host) return;
+      const bounds = getObjectBounds(host);
+      create({
+        id: crypto.randomUUID(),
+        type: "hole",
+        hostObjectId: host.id,
+        shape: "circle",
+        position: {
+          mode: "relative",
+          xRatio: (raw.x - bounds.x) / bounds.width,
+          yRatio: (raw.y - bounds.y) / bounds.height,
+        },
+        width: 10,
+        height: 5,
+        radius: 2.5,
+        cornerRadius: 0,
+        rotation: 0,
+        constrainToHost: true,
+      });
+      return;
+    }
     if (activeTool === "rectangle") {
       event.currentTarget.setPointerCapture(event.pointerId);
       setRectangleDraft({
@@ -665,6 +697,18 @@ export function CanvasView(props: Props) {
             ...dimension,
             offset: dimension.offset + delta,
           });
+        } else if (interaction.startObject.type === "hole") {
+          const center = resolveHoleCenter(
+            interaction.startObject,
+            props.referenceObjects,
+          );
+          if (center)
+            props.onObjectUpdate(
+              moveHole(interaction.startObject, props.referenceObjects, {
+                x: center.x + point.x - interaction.startPointer.x,
+                y: center.y + point.y - interaction.startPointer.y,
+              }),
+            );
         } else {
           props.onObjectUpdate(
             translateCadObject(
@@ -801,7 +845,12 @@ export function CanvasView(props: Props) {
     const source = props.referenceObjects.find(
       (object) => object.id === dimension.referenceA.objectId,
     );
-    if (!source || source.type === "stitch" || source.type === "dimension")
+    if (
+      !source ||
+      source.type === "stitch" ||
+      source.type === "dimension" ||
+      source.type === "hole"
+    )
       return;
     if (props.lockedObjectIds.has(source.id)) return;
     const updated = driveDimensionValue(
@@ -933,7 +982,9 @@ export function CanvasView(props: Props) {
               onSelect={selectObject}
               onMoveStart={startMove}
               onHover={
-                object.type === "stitch" ? undefined : setStitchPreviewSourceId
+                object.type === "stitch" || object.type === "dimension"
+                  ? undefined
+                  : setStitchPreviewSourceId
               }
             />
           ))}
@@ -956,7 +1007,7 @@ export function CanvasView(props: Props) {
               <SelectionOverlay
                 rectangle={selected}
                 screenUnit={screenUnit}
-                showDimensions={interaction.type === "handle"}
+                showDimensions
                 onResizeStart={(event, handle) =>
                   startHandle(event, selected, { kind: "rectangle", handle })
                 }
@@ -982,6 +1033,7 @@ export function CanvasView(props: Props) {
           {activeTool === "select" &&
             selected &&
             selected.type !== "rectangle" &&
+            selected.type !== "hole" &&
             selected.type !== "stitch" &&
             selected.type !== "dimension" && (
               <ObjectHandles
@@ -990,6 +1042,13 @@ export function CanvasView(props: Props) {
                 onStart={startHandle}
               />
             )}
+          {activeTool === "select" && selected && (
+            <AutoDimensionOverlay
+              object={selected}
+              objects={props.referenceObjects}
+              unit={screenUnit}
+            />
+          )}
           {rectangleDraft && (
             <rect
               className="cad-rectangle-draft"
@@ -1139,7 +1198,9 @@ function RadiusHandles({
             r={4 * unit}
             onPointerDown={(event) => onStart(event, handle.corner)}
           />
-          {activeCorner === handle.corner && (
+          {(activeCorner === handle.corner ||
+            (handle.corner === "topLeft" &&
+              rectangle.cornerRadii.topLeft > 0)) && (
             <text
               className="radius-label"
               x={handle.x + 8 * unit}
@@ -1153,6 +1214,52 @@ function RadiusHandles({
         </g>
       ))}
     </g>
+  );
+}
+
+function AutoDimensionOverlay({
+  object,
+  objects,
+  unit,
+}: {
+  object: CadObject;
+  objects: CadObject[];
+  unit: number;
+}) {
+  let x = 0;
+  let y = 0;
+  let label = "";
+  if (object.type === "circle") {
+    x = object.cx;
+    y = object.cy - object.radius - 12 * unit;
+    label = `Ø ${(object.radius * 2).toFixed(2)} mm`;
+  } else if (object.type === "line") {
+    x = (object.x1 + object.x2) / 2;
+    y = (object.y1 + object.y2) / 2 - 10 * unit;
+    label = `${Math.hypot(object.x2 - object.x1, object.y2 - object.y1).toFixed(2)} mm`;
+  } else if (object.type === "hole") {
+    const center = resolveHoleCenter(object, objects);
+    if (!center) return null;
+    x = center.x;
+    y =
+      center.y -
+      (object.shape === "circle" ? object.radius : object.height / 2) -
+      10 * unit;
+    label =
+      object.shape === "circle"
+        ? `Ø ${(object.radius * 2).toFixed(2)} mm`
+        : `${object.width.toFixed(2)} × ${object.height.toFixed(2)} mm`;
+  } else return null;
+  return (
+    <text
+      className="auto-dimension-label"
+      x={x}
+      y={y}
+      textAnchor="middle"
+      fontSize={11 * unit}
+    >
+      {label}
+    </text>
   );
 }
 

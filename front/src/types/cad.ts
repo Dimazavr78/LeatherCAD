@@ -60,7 +60,7 @@ export interface ArcObject extends CadObjectMetadata {
   startAngle: number;
   endAngle: number;
 }
-export type HoleShape = "round" | "diamond" | "slit";
+export type StitchHoleShape = "round" | "diamond" | "slit";
 export type StitchMode = "fixed-spacing" | "fit-evenly" | "adaptive";
 export type StitchAlignment = "start" | "center" | "corners";
 export type StitchCornerMode = "continuous" | "corner-first" | "adaptive";
@@ -71,7 +71,7 @@ export interface StitchObject extends CadObjectMetadata {
   offset: number;
   spacing: number;
   holeSize: number;
-  holeShape: HoleShape;
+  holeShape: StitchHoleShape;
   holeAngle: number | "follow-path";
   mode: StitchMode;
   alignment: StitchAlignment;
@@ -83,7 +83,7 @@ export interface StitchObject extends CadObjectMetadata {
 
 export type DimensionType =
   "aligned" | "horizontal" | "vertical" | "radius" | "diameter" | "arc-length";
-export type DimensionAnchor =
+export type GeometryAnchor =
   | "point"
   | "start"
   | "end"
@@ -91,13 +91,23 @@ export type DimensionAnchor =
   | "top-left"
   | "top-right"
   | "bottom-left"
-  | "bottom-right";
-export interface DimensionReference {
+  | "bottom-right"
+  | "left"
+  | "right"
+  | "top"
+  | "bottom"
+  | "vertex"
+  | "edge"
+  | "radius"
+  | "diameter";
+export interface GeometryReference {
   objectId?: string;
-  anchor: DimensionAnchor;
+  anchor: GeometryAnchor;
+  index?: number;
   vertexIndex?: number;
   point?: Point;
 }
+export type DimensionReference = GeometryReference;
 export interface DimensionObject extends CadObjectMetadata {
   id: string;
   type: "dimension";
@@ -123,9 +133,35 @@ export interface EditorLevel {
   name: string;
   parentId: string | null;
 }
+export type HoleShape = "circle" | "slot" | "rectangle" | "custom";
+export type HolePosition =
+  | { mode: "absolute"; x: number; y: number }
+  | { mode: "relative"; xRatio: number; yRatio: number }
+  | {
+      mode: "offset";
+      fromX: "left" | "right";
+      fromY: "top" | "bottom";
+      offsetX: number;
+      offsetY: number;
+    };
+export interface HoleObject extends CadObjectMetadata {
+  id: string;
+  type: "hole";
+  hostObjectId: string;
+  shape: HoleShape;
+  position: HolePosition;
+  width: number;
+  height: number;
+  radius: number;
+  cornerRadius: number;
+  rotation: number;
+  constrainToHost: boolean;
+  customSourceObjectId?: string;
+}
 export type PathObject =
   RectangleObject | LineObject | PolylineObject | CircleObject | ArcObject;
-export type CadObject = PathObject | StitchObject | DimensionObject;
+export type CadObject =
+  PathObject | HoleObject | StitchObject | DimensionObject;
 export type CadObjectType = CadObject["type"];
 export type Tool =
   | "select"
@@ -135,6 +171,7 @@ export type Tool =
   | "circle"
   | "arc"
   | "stitch"
+  | "hole"
   | "fillet"
   | "dimension"
   | "measure";

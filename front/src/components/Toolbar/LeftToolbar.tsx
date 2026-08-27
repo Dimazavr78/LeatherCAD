@@ -19,6 +19,7 @@ function getToolId(tool: ToolConfig): Tool | null {
     "circle",
     "arc",
     "stitch",
+    "hole",
     "fillet",
     "dimension",
     "measure",

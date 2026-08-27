@@ -13,6 +13,11 @@ import {
 } from "../geometry/geometryMath";
 import { createPath, getPathLength } from "../geometry/pathMath";
 import { normalizeRectangleCornerRadii } from "../geometry/rectangleGeometry";
+import {
+  getGeometryAnchors,
+  resolveGeometryReference,
+  type GeometryAnchorPoint,
+} from "../geometry/geometryReferences";
 
 export interface Measurement {
   distance: number;
@@ -21,11 +26,7 @@ export interface Measurement {
   angle: number;
 }
 
-export interface SnapAnchor {
-  point: Point;
-  reference: DimensionReference;
-  kind: "endpoint" | "center" | "vertex";
-}
+export type SnapAnchor = GeometryAnchorPoint;
 
 export function measurePoints(a: Point, b: Point): Measurement {
   const deltaX = b.x - a.x;
@@ -39,94 +40,14 @@ export function measurePoints(a: Point, b: Point): Measurement {
 }
 
 export function getObjectAnchors(object: PathObject): SnapAnchor[] {
-  const reference = (
-    anchor: DimensionReference["anchor"],
-    point: Point,
-    kind: SnapAnchor["kind"],
-  ): SnapAnchor => ({
-    point,
-    kind,
-    reference: { objectId: object.id, anchor },
-  });
-  if (object.type === "line")
-    return [
-      reference("start", { x: object.x1, y: object.y1 }, "endpoint"),
-      reference("end", { x: object.x2, y: object.y2 }, "endpoint"),
-    ];
-  if (object.type === "rectangle")
-    return [
-      reference("top-left", { x: object.x, y: object.y }, "vertex"),
-      reference(
-        "top-right",
-        { x: object.x + object.width, y: object.y },
-        "vertex",
-      ),
-      reference(
-        "bottom-right",
-        { x: object.x + object.width, y: object.y + object.height },
-        "vertex",
-      ),
-      reference(
-        "bottom-left",
-        { x: object.x, y: object.y + object.height },
-        "vertex",
-      ),
-    ];
-  if (object.type === "polyline")
-    return object.points.map((point, vertexIndex) => ({
-      point,
-      kind: "vertex",
-      reference: { objectId: object.id, anchor: "point", vertexIndex },
-    }));
-  return [reference("center", { x: object.cx, y: object.cy }, "center")];
+  return getGeometryAnchors(object);
 }
 
 export function resolveDimensionReference(
   reference: DimensionReference,
   objects: CadObject[],
 ): Point | null {
-  if (!reference.objectId) return reference.point ?? null;
-  const object = objects.find(
-    (candidate) => candidate.id === reference.objectId,
-  );
-  if (!object || object.type === "stitch" || object.type === "dimension")
-    return reference.point ?? null;
-  if (object.type === "line")
-    return reference.anchor === "end"
-      ? { x: object.x2, y: object.y2 }
-      : { x: object.x1, y: object.y1 };
-  if (object.type === "rectangle") {
-    const right =
-      reference.anchor === "top-right" || reference.anchor === "bottom-right";
-    const bottom =
-      reference.anchor === "bottom-left" || reference.anchor === "bottom-right";
-    return {
-      x: object.x + (right ? object.width : 0),
-      y: object.y + (bottom ? object.height : 0),
-    };
-  }
-  if (object.type === "polyline") {
-    if (reference.vertexIndex !== undefined)
-      return object.points[reference.vertexIndex] ?? null;
-    if (reference.point) {
-      let nearest = object.points[0];
-      let best = Infinity;
-      for (const point of object.points) {
-        const current = distance(point, reference.point);
-        if (current < best) {
-          best = current;
-          nearest = point;
-        }
-      }
-      return nearest ?? null;
-    }
-    return (
-      object.points[
-        reference.anchor === "end" ? object.points.length - 1 : 0
-      ] ?? null
-    );
-  }
-  return { x: object.cx, y: object.cy };
+  return resolveGeometryReference(reference, objects);
 }
 
 export function getDimensionValue(

@@ -1,6 +1,7 @@
 import type { PointerEvent } from "react";
 import type {
   CadObject,
+  HoleObject,
   PathObject,
   StitchObject,
   Tool,
@@ -12,6 +13,10 @@ import {
   getRadialEnd,
   resolveDimensionReference,
 } from "../../editor/dimensions/dimensionMath";
+import {
+  createHolePath,
+  resolveHoleCenter,
+} from "../../editor/holes/holeGeometry";
 
 interface Props {
   object: CadObject;
@@ -73,6 +78,31 @@ export function CadObjectRenderer({
         onPointerDown={pointerDown}
       />
     );
+  if (object.type === "hole") {
+    const center = resolveHoleCenter(object, objects);
+    const path = createHolePath(object, objects);
+    if (!center || !path) return null;
+    return (
+      <g className={className} onPointerDown={pointerDown}>
+        <path
+          className="hole-cutout"
+          d={buildPathData(path)}
+          vectorEffect="non-scaling-stroke"
+          transform={
+            object.rotation
+              ? `rotate(${object.rotation} ${center.x} ${center.y})`
+              : undefined
+          }
+        />
+        <circle
+          className="hole-center"
+          cx={center.x}
+          cy={center.y}
+          r={screenUnit * 2}
+        />
+      </g>
+    );
+  }
   if (object.type === "dimension")
     return (
       <DimensionRenderer
@@ -289,13 +319,16 @@ function StitchRenderer({
   onPointerDown: (event: PointerEvent<SVGElement>) => void;
 }) {
   const source = objects.find(
-    (candidate): candidate is PathObject =>
+    (candidate): candidate is PathObject | HoleObject =>
       candidate.id === stitch.sourceObjectId &&
       candidate.type !== "stitch" &&
       candidate.type !== "dimension",
   );
   if (!source) return null;
-  const path = createPath(source, stitch.offset);
+  const path =
+    source.type === "hole"
+      ? createHolePath(source, objects, stitch.offset)
+      : createPath(source, stitch.offset);
   const generated = generateStitch(path, stitch);
   const guideline =
     generated.holes

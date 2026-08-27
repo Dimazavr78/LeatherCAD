@@ -2,6 +2,7 @@ import type { CadLayer, CadObject, EditorLevel } from "../types/cad";
 
 export const DEFAULT_LAYER_IDS = {
   geometry: "layer-geometry",
+  holes: "layer-holes",
   stitch: "layer-stitch",
   dimensions: "layer-dimensions",
   construction: "layer-construction",
@@ -18,11 +19,19 @@ export const DEFAULT_LAYERS: CadLayer[] = [
     type: "normal",
   },
   {
+    id: DEFAULT_LAYER_IDS.holes,
+    name: "Holes",
+    visible: true,
+    locked: false,
+    order: 1,
+    type: "normal",
+  },
+  {
     id: DEFAULT_LAYER_IDS.stitch,
     name: "Stitch",
     visible: true,
     locked: false,
-    order: 1,
+    order: 2,
     type: "normal",
   },
   {
@@ -30,7 +39,7 @@ export const DEFAULT_LAYERS: CadLayer[] = [
     name: "Dimensions",
     visible: true,
     locked: false,
-    order: 2,
+    order: 3,
     type: "annotation",
   },
   {
@@ -38,7 +47,7 @@ export const DEFAULT_LAYERS: CadLayer[] = [
     name: "Construction",
     visible: true,
     locked: false,
-    order: 3,
+    order: 4,
     type: "construction",
   },
 ];
@@ -53,6 +62,7 @@ export function getAutomaticLayerId(
   activeLayerId: string,
 ): string {
   if (object.type === "stitch") return DEFAULT_LAYER_IDS.stitch;
+  if (object.type === "hole") return DEFAULT_LAYER_IDS.holes;
   if (object.type === "dimension") return DEFAULT_LAYER_IDS.dimensions;
   return activeLayerId;
 }

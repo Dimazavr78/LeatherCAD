@@ -24,7 +24,10 @@ import {
 } from "../../editor/useEditorShortcuts";
 import type { CadLayer, CadObject, EditorLevel, Tool } from "../../types/cad";
 import { normalizedRectangle } from "../../editor/geometry/rectangleGeometry";
-import { dependsOnObject } from "../../editor/dependencies";
+import {
+  dependsOnObject,
+  getDependentObjectIds,
+} from "../../editor/dependencies";
 import { BottomBar } from "./BottomBar";
 import { TopBar } from "./TopBar";
 import {
@@ -183,14 +186,19 @@ export function AppShell() {
       return;
     }
 
-    commitState((document) => ({
-      ...document,
-      objects: document.objects.filter(
-        (object) =>
-          object.id !== selectedObjectId &&
-          !dependsOnObject(object, selectedObjectId),
-      ),
-    }));
+    commitState((document) => {
+      const dependentIds = getDependentObjectIds(
+        selectedObjectId,
+        document.objects,
+      );
+      return {
+        ...document,
+        objects: document.objects.filter(
+          (object) =>
+            object.id !== selectedObjectId && !dependentIds.has(object.id),
+        ),
+      };
+    });
     setSelectedObjectId(null);
   }, [
     canvasBusy,

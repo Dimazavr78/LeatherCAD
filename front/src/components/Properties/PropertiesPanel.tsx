@@ -5,6 +5,7 @@ import type {
   CadObject,
   DimensionObject,
   EditorLevel,
+  HoleObject,
   PathObject,
   StitchObject,
 } from "../../types/cad";
@@ -16,6 +17,11 @@ import {
 import { generateStitch } from "../../editor/stitch/stitchMath";
 import { getDimensionValue } from "../../editor/dimensions/dimensionMath";
 import { normalizeRectangleCornerRadii } from "../../editor/geometry/rectangleGeometry";
+import {
+  createHolePath,
+  getObjectBounds,
+  resolveHoleCenter,
+} from "../../editor/holes/holeGeometry";
 
 interface Props {
   selectedObject: CadObject | null;
@@ -315,7 +321,16 @@ function ObjectProperties({
         />
       </>
     );
-  } else if (object.type === "stitch")
+  } else if (object.type === "hole")
+    body = (
+      <HoleProperties
+        hole={object}
+        objects={objects}
+        onChange={onObjectChange}
+        {...events}
+      />
+    );
+  else if (object.type === "stitch")
     body = (
       <StitchProperties
         stitch={object}
@@ -378,6 +393,241 @@ function ObjectProperties({
       </Group>
       {body}
     </div>
+  );
+}
+
+function HoleProperties({
+  hole,
+  objects,
+  onChange,
+  ...events
+}: {
+  hole: HoleObject;
+  objects: CadObject[];
+  onChange: Change;
+  onEditStart: () => void;
+  onEditCommit: () => void;
+  onEditCancel: () => void;
+}) {
+  const { t } = useTranslation();
+  const host = objects.find(
+    (object): object is PathObject =>
+      object.id === hole.hostObjectId &&
+      object.type !== "stitch" &&
+      object.type !== "dimension" &&
+      object.type !== "hole",
+  );
+  const bounds = host ? getObjectBounds(host) : null;
+  const center = resolveHoleCenter(hole, objects);
+  const changePositionMode = (mode: HoleObject["position"]["mode"]) => {
+    if (!center || !bounds) return;
+    if (mode === "absolute")
+      onChange(hole.id, { position: { mode, x: center.x, y: center.y } });
+    else if (mode === "relative")
+      onChange(hole.id, {
+        position: {
+          mode,
+          xRatio: (center.x - bounds.x) / bounds.width,
+          yRatio: (center.y - bounds.y) / bounds.height,
+        },
+      });
+    else
+      onChange(hole.id, {
+        position: {
+          mode,
+          fromX: "left",
+          fromY: "top",
+          offsetX: center.x - bounds.x,
+          offsetY: center.y - bounds.y,
+        },
+      });
+  };
+  const position = hole.position;
+  return (
+    <>
+      <Group title={t("properties.sections.hole")}>
+        <div className="property-field property-read">
+          <span>{t("properties.fields.host")}</span>
+          <strong>
+            {host
+              ? `${host.type} #${host.id.slice(0, 6)}`
+              : t("properties.warnings.missingSource")}
+          </strong>
+        </div>
+        <Select
+          label={t("properties.fields.shape")}
+          value={hole.shape}
+          values={["circle", "slot", "rectangle"]}
+          onChange={(value) =>
+            onChange(hole.id, { shape: value as HoleObject["shape"] })
+          }
+          {...events}
+        />
+        {hole.shape === "circle" ? (
+          <NumericProperty
+            label={t("properties.fields.diameter")}
+            value={hole.radius * 2}
+            min={0.2}
+            onChange={(value) =>
+              onChange(hole.id, { radius: Math.max(0.1, Number(value) / 2) })
+            }
+            {...events}
+          />
+        ) : (
+          <>
+            <NumericProperty
+              label={t("properties.fields.length")}
+              value={hole.width}
+              min={0.2}
+              onChange={(value) =>
+                onChange(hole.id, { width: Math.max(0.2, Number(value)) })
+              }
+              {...events}
+            />
+            <NumericProperty
+              label={t("properties.fields.width")}
+              value={hole.height}
+              min={0.2}
+              onChange={(value) =>
+                onChange(hole.id, { height: Math.max(0.2, Number(value)) })
+              }
+              {...events}
+            />
+            {hole.shape === "rectangle" && (
+              <NumericProperty
+                label={t("properties.fields.radius")}
+                value={hole.cornerRadius}
+                min={0}
+                onChange={(value) =>
+                  onChange(hole.id, {
+                    cornerRadius: Math.max(0, Number(value)),
+                  })
+                }
+                {...events}
+              />
+            )}
+          </>
+        )}
+        <NumericProperty
+          label={t("properties.fields.rotation")}
+          value={hole.rotation}
+          unit="°"
+          onChange={(value) =>
+            onChange(hole.id, { rotation: Number(value) || 0 })
+          }
+          {...events}
+        />
+      </Group>
+      <Group title={t("properties.sections.position")}>
+        <Select
+          label={t("properties.fields.positionMode")}
+          value={position.mode}
+          values={["absolute", "relative", "offset"]}
+          onChange={(value) =>
+            changePositionMode(value as HoleObject["position"]["mode"])
+          }
+          {...events}
+        />
+        {position.mode === "absolute" && (
+          <>
+            <NumericProperty
+              label="X"
+              value={position.x}
+              onChange={(value) =>
+                onChange(hole.id, {
+                  position: { ...position, x: Number(value) },
+                })
+              }
+              {...events}
+            />
+            <NumericProperty
+              label="Y"
+              value={position.y}
+              onChange={(value) =>
+                onChange(hole.id, {
+                  position: { ...position, y: Number(value) },
+                })
+              }
+              {...events}
+            />
+          </>
+        )}
+        {position.mode === "relative" && (
+          <>
+            <NumericProperty
+              label="X ratio"
+              value={position.xRatio}
+              min={0}
+              unit=""
+              onChange={(value) =>
+                onChange(hole.id, {
+                  position: {
+                    ...position,
+                    xRatio: Math.min(1, Math.max(0, Number(value))),
+                  },
+                })
+              }
+              {...events}
+            />
+            <NumericProperty
+              label="Y ratio"
+              value={position.yRatio}
+              min={0}
+              unit=""
+              onChange={(value) =>
+                onChange(hole.id, {
+                  position: {
+                    ...position,
+                    yRatio: Math.min(1, Math.max(0, Number(value))),
+                  },
+                })
+              }
+              {...events}
+            />
+          </>
+        )}
+        {position.mode === "offset" && (
+          <>
+            <NumericProperty
+              label={t("properties.fields.offsetX")}
+              value={position.offsetX}
+              min={0}
+              onChange={(value) =>
+                onChange(hole.id, {
+                  position: {
+                    ...position,
+                    offsetX: Math.max(0, Number(value)),
+                  },
+                })
+              }
+              {...events}
+            />
+            <NumericProperty
+              label={t("properties.fields.offsetY")}
+              value={position.offsetY}
+              min={0}
+              onChange={(value) =>
+                onChange(hole.id, {
+                  position: {
+                    ...position,
+                    offsetY: Math.max(0, Number(value)),
+                  },
+                })
+              }
+              {...events}
+            />
+          </>
+        )}
+        <Check
+          label={t("properties.fields.constrainToHost")}
+          checked={hole.constrainToHost}
+          onChange={(checked) =>
+            onChange(hole.id, { constrainToHost: checked })
+          }
+          {...events}
+        />
+      </Group>
+    </>
   );
 }
 
@@ -462,13 +712,17 @@ function StitchProperties({
 }) {
   const { t } = useTranslation();
   const source = objects.find(
-    (object): object is PathObject =>
+    (object): object is PathObject | HoleObject =>
       object.id === stitch.sourceObjectId &&
       object.type !== "stitch" &&
       object.type !== "dimension",
   );
   const generated = generateStitch(
-    source ? createPath(source, stitch.offset) : null,
+    source
+      ? source.type === "hole"
+        ? createHolePath(source, objects, stitch.offset)
+        : createPath(source, stitch.offset)
+      : null,
     stitch,
   );
   const updateNumber =

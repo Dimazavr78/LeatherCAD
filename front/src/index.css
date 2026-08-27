@@ -644,6 +644,31 @@ button {
   cursor: nwse-resize;
 }
 
+.hole-cutout {
+  fill: #15171a;
+  stroke: #f0b96b;
+  stroke-width: 1.5;
+  fill-rule: evenodd;
+}
+
+.cad-object--hole.cad-object--selected .hole-cutout {
+  stroke: #79c8ff;
+  stroke-width: 2;
+}
+
+.hole-center {
+  fill: #79c8ff;
+  pointer-events: none;
+}
+
+.auto-dimension-label {
+  fill: #aeb9c5;
+  paint-order: stroke;
+  stroke: #15171a;
+  stroke-width: 3px;
+  pointer-events: none;
+}
+
 .radius-label {
   fill: #dbe4ec;
   paint-order: stroke;

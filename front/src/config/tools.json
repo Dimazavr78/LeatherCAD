@@ -121,10 +121,10 @@
     }
   },
   {
-    "id": "holes",
+    "id": "hole",
     "icon": "○",
     "category": "leather",
-    "enabled": false,
+    "enabled": true,
     "localization": {
       "enabled": true,
       "label": "toolbar.holes.label",
