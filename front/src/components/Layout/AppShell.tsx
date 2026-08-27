@@ -446,6 +446,7 @@ export function AppShell() {
               levels={levels}
               readOnly={selectedLocked}
               onObjectChange={updateObject}
+              onObjectCreate={addObject}
               onEditStart={beginTransaction}
               onEditCommit={commitTransaction}
               onEditCancel={cancelTransaction}

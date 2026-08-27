@@ -60,7 +60,8 @@ export function CadObjectRenderer({
     if (
       activeTool === "dimension" ||
       activeTool === "measure" ||
-      activeTool === "fillet"
+      activeTool === "fillet" ||
+      activeTool === "hole"
     )
       return;
     event.stopPropagation();
@@ -88,11 +89,6 @@ export function CadObjectRenderer({
           className="hole-cutout"
           d={buildPathData(path)}
           vectorEffect="non-scaling-stroke"
-          transform={
-            object.rotation
-              ? `rotate(${object.rotation} ${center.x} ${center.y})`
-              : undefined
-          }
         />
         <circle
           className="hole-center"

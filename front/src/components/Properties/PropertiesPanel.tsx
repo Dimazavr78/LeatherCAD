@@ -20,6 +20,7 @@ import { normalizeRectangleCornerRadii } from "../../editor/geometry/rectangleGe
 import {
   createHolePath,
   getObjectBounds,
+  isPointInHost,
   resolveHoleCenter,
 } from "../../editor/holes/holeGeometry";
 
@@ -30,6 +31,7 @@ interface Props {
   levels: EditorLevel[];
   readOnly: boolean;
   onObjectChange: (id: string, patch: Partial<CadObject>) => void;
+  onObjectCreate: (object: CadObject) => void;
   onEditStart: () => void;
   onEditCommit: () => void;
   onEditCancel: () => void;
@@ -67,6 +69,7 @@ function ObjectProperties({
   layers,
   levels,
   onObjectChange,
+  onObjectCreate,
   ...events
 }: Props & { selectedObject: CadObject }) {
   const { t } = useTranslation();
@@ -327,6 +330,7 @@ function ObjectProperties({
         hole={object}
         objects={objects}
         onChange={onObjectChange}
+        onCreate={onObjectCreate}
         {...events}
       />
     );
@@ -400,11 +404,13 @@ function HoleProperties({
   hole,
   objects,
   onChange,
+  onCreate,
   ...events
 }: {
   hole: HoleObject;
   objects: CadObject[];
   onChange: Change;
+  onCreate: (object: CadObject) => void;
   onEditStart: () => void;
   onEditCommit: () => void;
   onEditCancel: () => void;
@@ -588,6 +594,34 @@ function HoleProperties({
         )}
         {position.mode === "offset" && (
           <>
+            <Select
+              label={t("properties.fields.horizontalEdge")}
+              value={position.fromX}
+              values={["left", "right"]}
+              onChange={(value) =>
+                onChange(hole.id, {
+                  position: {
+                    ...position,
+                    fromX: value as "left" | "right",
+                  },
+                })
+              }
+              {...events}
+            />
+            <Select
+              label={t("properties.fields.verticalEdge")}
+              value={position.fromY}
+              values={["top", "bottom"]}
+              onChange={(value) =>
+                onChange(hole.id, {
+                  position: {
+                    ...position,
+                    fromY: value as "top" | "bottom",
+                  },
+                })
+              }
+              {...events}
+            />
             <NumericProperty
               label={t("properties.fields.offsetX")}
               value={position.offsetX}
@@ -627,6 +661,30 @@ function HoleProperties({
           {...events}
         />
       </Group>
+      <button
+        type="button"
+        className="property-action"
+        onClick={() =>
+          onCreate({
+            id: crypto.randomUUID(),
+            type: "stitch",
+            sourceObjectId: hole.id,
+            offset: 3,
+            spacing: 3,
+            holeSize: 1,
+            holeShape: "diamond",
+            holeAngle: "follow-path",
+            mode: "adaptive",
+            alignment: "corners",
+            cornerMode: "adaptive",
+            maxSpacingDeviation: 5,
+            showLine: true,
+            showHoles: true,
+          })
+        }
+      >
+        {t("properties.actions.addStitchAroundHole")}
+      </button>
     </>
   );
 }
@@ -725,6 +783,14 @@ function StitchProperties({
       : null,
     stitch,
   );
+  const stitchOutsideHost =
+    source?.type === "hole" &&
+    (() => {
+      const host = objects.find((object) => object.id === source.hostObjectId);
+      return (
+        !host || generated.holes.some((point) => !isPointInHost(point, host))
+      );
+    })();
   const updateNumber =
     (field: keyof StitchObject, min: number) => (value: string) => {
       const parsed = Number(value);
@@ -849,6 +915,11 @@ function StitchProperties({
       {generated.warnings.length > 0 && (
         <div className="property-warning">
           ⚠ {t(`properties.warnings.${generated.warnings[0]}`)}
+        </div>
+      )}
+      {stitchOutsideHost && (
+        <div className="property-warning">
+          ⚠ {t("properties.warnings.stitch-too-close-edge")}
         </div>
       )}
     </>

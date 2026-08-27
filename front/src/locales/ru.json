@@ -52,6 +52,7 @@
     "arc": { "title": "Дуга" },
     "stitch": { "title": "Шов" },
     "dimension": { "title": "Размер" },
+    "hole": { "title": "Отверстие" },
     "sections": {
       "position": "Положение",
       "size": "Размер",
@@ -63,7 +64,8 @@
       "holes": "Отверстия",
       "display": "Отображение",
       "corners": "Углы",
-      "organization": "Организация"
+      "organization": "Организация",
+      "hole": "Отверстие"
     },
     "fields": {
       "x": "X",
@@ -102,7 +104,16 @@
       "dimensionType": "Тип",
       "value": "Значение",
       "precision": "Точность",
-      "showUnit": "Показывать единицу"
+      "showUnit": "Показывать единицу",
+      "host": "Деталь",
+      "shape": "Форма",
+      "rotation": "Поворот",
+      "positionMode": "Режим положения",
+      "offsetX": "Отступ по горизонтали",
+      "offsetY": "Отступ по вертикали",
+      "constrainToHost": "Ограничить внутри детали",
+      "horizontalEdge": "Горизонтальный край",
+      "verticalEdge": "Вертикальный край"
     },
     "options": {
       "fixed-spacing": "Фиксированный шаг",
@@ -121,14 +132,26 @@
       "vertical": "Вертикальный",
       "radius": "Радиус",
       "diameter": "Диаметр",
-      "arc-length": "Длина дуги"
+      "arc-length": "Длина дуги",
+      "circle": "Круглое отверстие",
+      "slot": "Овальное отверстие",
+      "rectangle": "Прямоугольное отверстие",
+      "absolute": "Абсолютное",
+      "relative": "Относительное",
+      "offset": "От краёв",
+      "left": "От левого края",
+      "right": "От правого края",
+      "top": "От верхнего края",
+      "bottom": "От нижнего края"
     },
     "warnings": {
       "spacing-deviation": "Значительное изменение шага",
       "too-small-path": "Путь слишком мал",
       "offset-failed": "Не удалось построить отступ",
-      "missingSource": "Источник отсутствует"
-    }
+      "missingSource": "Источник отсутствует",
+      "stitch-too-close-edge": "Шов слишком близко к внешнему краю"
+    },
+    "actions": { "addStitchAroundHole": "Добавить шов вокруг отверстия" }
   },
   "layers": {
     "title": "Слои",

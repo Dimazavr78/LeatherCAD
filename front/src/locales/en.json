@@ -46,6 +46,7 @@
     "arc": { "title": "Arc" },
     "stitch": { "title": "Stitch" },
     "dimension": { "title": "Dimension" },
+    "hole": { "title": "Hole" },
     "sections": {
       "position": "Position",
       "size": "Size",
@@ -57,7 +58,8 @@
       "holes": "Holes",
       "display": "Display",
       "corners": "Corners",
-      "organization": "Organization"
+      "organization": "Organization",
+      "hole": "Hole"
     },
     "fields": {
       "x": "X",
@@ -96,7 +98,16 @@
       "dimensionType": "Type",
       "value": "Value",
       "precision": "Precision",
-      "showUnit": "Show unit"
+      "showUnit": "Show unit",
+      "host": "Host",
+      "shape": "Shape",
+      "rotation": "Rotation",
+      "positionMode": "Position mode",
+      "offsetX": "Horizontal edge offset",
+      "offsetY": "Vertical edge offset",
+      "constrainToHost": "Constrain inside object",
+      "horizontalEdge": "Horizontal edge",
+      "verticalEdge": "Vertical edge"
     },
     "options": {
       "fixed-spacing": "Fixed spacing",
@@ -115,14 +126,26 @@
       "vertical": "Vertical",
       "radius": "Radius",
       "diameter": "Diameter",
-      "arc-length": "Arc length"
+      "arc-length": "Arc length",
+      "circle": "Circular hole",
+      "slot": "Slot hole",
+      "rectangle": "Rectangular hole",
+      "absolute": "Absolute",
+      "relative": "Relative",
+      "offset": "Edge offsets",
+      "left": "From left",
+      "right": "From right",
+      "top": "From top",
+      "bottom": "From bottom"
     },
     "warnings": {
       "spacing-deviation": "Large spacing adjustment",
       "too-small-path": "Path is too small",
       "offset-failed": "Offset cannot be built",
-      "missingSource": "Missing source"
-    }
+      "missingSource": "Missing source",
+      "stitch-too-close-edge": "Stitch is too close to the outer edge"
+    },
+    "actions": { "addStitchAroundHole": "Add Stitch Around Hole" }
   },
   "layers": {
     "title": "Layers",

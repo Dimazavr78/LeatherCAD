@@ -136,35 +136,63 @@ export function createHolePath(
 ): CadPath | null {
   const center = resolveHoleCenter(hole, objects);
   if (!center) return null;
+  let path: CadPath | null;
   if (hole.shape === "circle")
-    return createPath({
+    path = createPath({
       id: hole.id,
       type: "circle",
       cx: center.x,
       cy: center.y,
       radius: hole.radius + outwardOffset,
     });
-  const width = hole.width + outwardOffset * 2;
-  const height = hole.height + outwardOffset * 2;
-  const radius =
-    hole.shape === "slot"
-      ? height / 2
-      : Math.min(hole.cornerRadius + outwardOffset, width / 2, height / 2);
-  return createPath({
-    id: hole.id,
-    type: "rectangle",
-    x: center.x - width / 2,
-    y: center.y - height / 2,
-    width,
-    height,
-    linkCorners: true,
-    cornerRadii: {
-      topLeft: radius,
-      topRight: radius,
-      bottomRight: radius,
-      bottomLeft: radius,
-    },
+  else {
+    const width = hole.width + outwardOffset * 2;
+    const height = hole.height + outwardOffset * 2;
+    const radius =
+      hole.shape === "slot"
+        ? height / 2
+        : Math.min(hole.cornerRadius + outwardOffset, width / 2, height / 2);
+    path = createPath({
+      id: hole.id,
+      type: "rectangle",
+      x: center.x - width / 2,
+      y: center.y - height / 2,
+      width,
+      height,
+      linkCorners: true,
+      cornerRadii: {
+        topLeft: radius,
+        topRight: radius,
+        bottomRight: radius,
+        bottomLeft: radius,
+      },
+    });
+  }
+  if (!path || !hole.rotation) return path;
+  const radians = (hole.rotation * Math.PI) / 180;
+  const rotate = (point: Point): Point => ({
+    x:
+      center.x +
+      (point.x - center.x) * Math.cos(radians) -
+      (point.y - center.y) * Math.sin(radians),
+    y:
+      center.y +
+      (point.x - center.x) * Math.sin(radians) +
+      (point.y - center.y) * Math.cos(radians),
   });
+  return {
+    ...path,
+    segments: path.segments.map((segment) =>
+      segment.type === "line"
+        ? { ...segment, start: rotate(segment.start), end: rotate(segment.end) }
+        : {
+            ...segment,
+            start: rotate(segment.start),
+            end: rotate(segment.end),
+            center: rotate(segment.center),
+          },
+    ),
+  };
 }
 
 export function isPointInHost(

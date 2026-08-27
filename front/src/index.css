@@ -666,7 +666,8 @@ button {
   paint-order: stroke;
   stroke: #15171a;
   stroke-width: 3px;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: text;
 }
 
 .radius-label {
@@ -696,6 +697,17 @@ button {
 
 .properties-fieldset:disabled {
   opacity: 0.58;
+}
+
+.property-action {
+  width: calc(100% - 24px);
+  margin: 12px;
+  padding: 7px 10px;
+  color: #dbe4ec;
+  background: #2b3138;
+  border: 1px solid #48515b;
+  border-radius: 3px;
+  cursor: pointer;
 }
 
 .cad-rectangle-draft {

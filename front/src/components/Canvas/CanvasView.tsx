@@ -109,6 +109,7 @@ type EditHandle =
   | { kind: "radius" }
   | { kind: "arc-start" }
   | { kind: "arc-end" }
+  | { kind: "hole-size" }
   | {
       kind: "corner-radius";
       corner: keyof Extract<PathObject, { type: "rectangle" }>["cornerRadii"];
@@ -126,7 +127,7 @@ type Interaction =
       type: "handle";
       pointerId: number;
       startPointer: Point;
-      startObject: PathObject;
+      startObject: PathObject | Extract<CadObject, { type: "hole" }>;
       handle: EditHandle;
     };
 const MIN_SIZE = 1;
@@ -404,7 +405,7 @@ export function CanvasView(props: Props) {
   };
   const startHandle = (
     event: PointerEvent<SVGElement>,
-    object: PathObject,
+    object: PathObject | Extract<CadObject, { type: "hole" }>,
     handle: EditHandle,
   ) => {
     const svg = svgRef.current;
@@ -424,10 +425,10 @@ export function CanvasView(props: Props) {
   };
 
   const updateHandle = (
-    object: PathObject,
+    object: PathObject | Extract<CadObject, { type: "hole" }>,
     handle: EditHandle,
     point: Point,
-  ): PathObject => {
+  ): PathObject | Extract<CadObject, { type: "hole" }> => {
     if (object.type === "rectangle" && handle.kind === "corner-radius") {
       const right = object.x + object.width;
       const bottom = object.y + object.height;
@@ -719,6 +720,31 @@ export function CanvasView(props: Props) {
           );
         }
       else if (
+        interaction.startObject.type === "hole" &&
+        interaction.handle.kind === "hole-size"
+      ) {
+        const center = resolveHoleCenter(
+          interaction.startObject,
+          props.referenceObjects,
+        );
+        if (center) {
+          const rotated =
+            Math.atan2(point.y - center.y, point.x - center.x) -
+            (interaction.startObject.rotation * Math.PI) / 180;
+          const projected = Math.max(
+            0.1,
+            Math.abs(
+              (point.x - center.x) * Math.cos(rotated) +
+                (point.y - center.y) * Math.sin(rotated),
+            ),
+          );
+          props.onObjectUpdate(
+            interaction.startObject.shape === "circle"
+              ? { ...interaction.startObject, radius: projected }
+              : { ...interaction.startObject, width: projected * 2 },
+          );
+        }
+      } else if (
         interaction.startObject.type === "rectangle" &&
         interaction.handle.kind === "corner-radius"
       ) {
@@ -1011,6 +1037,25 @@ export function CanvasView(props: Props) {
                 onResizeStart={(event, handle) =>
                   startHandle(event, selected, { kind: "rectangle", handle })
                 }
+                onDimensionEdit={() => {
+                  const value = window.prompt(
+                    "Width × Height (mm)",
+                    `${selected.width} × ${selected.height}`,
+                  );
+                  if (!value) return;
+                  const [width, height] = value.split(/[x×, ]+/).map(Number);
+                  if (width > 0 && height > 0)
+                    props.onObjectCommit({
+                      ...selected,
+                      width,
+                      height,
+                      cornerRadii: normalizeRectangleCornerRadii(
+                        width,
+                        height,
+                        selected.cornerRadii,
+                      ),
+                    });
+                }}
               />
               <RadiusHandles
                 rectangle={selected}
@@ -1042,11 +1087,50 @@ export function CanvasView(props: Props) {
                 onStart={startHandle}
               />
             )}
+          {activeTool === "select" && selected?.type === "hole" && (
+            <HoleHandles
+              hole={selected}
+              objects={props.referenceObjects}
+              unit={screenUnit}
+              onStart={(event) =>
+                startHandle(event, selected, { kind: "hole-size" })
+              }
+            />
+          )}
           {activeTool === "select" && selected && (
             <AutoDimensionOverlay
               object={selected}
               objects={props.referenceObjects}
               unit={screenUnit}
+              onEdit={(requestedValue) => {
+                if (!(requestedValue > 0)) return;
+                if (selected.type === "circle")
+                  props.onObjectCommit({
+                    ...selected,
+                    radius: requestedValue / 2,
+                  });
+                else if (selected.type === "line") {
+                  const length =
+                    Math.hypot(
+                      selected.x2 - selected.x1,
+                      selected.y2 - selected.y1,
+                    ) || 1;
+                  props.onObjectCommit({
+                    ...selected,
+                    x2:
+                      selected.x1 +
+                      ((selected.x2 - selected.x1) / length) * requestedValue,
+                    y2:
+                      selected.y1 +
+                      ((selected.y2 - selected.y1) / length) * requestedValue,
+                  });
+                } else if (selected.type === "hole")
+                  props.onObjectCommit(
+                    selected.shape === "circle"
+                      ? { ...selected, radius: requestedValue / 2 }
+                      : { ...selected, width: requestedValue },
+                  );
+              }}
             />
           )}
           {rectangleDraft && (
@@ -1221,10 +1305,12 @@ function AutoDimensionOverlay({
   object,
   objects,
   unit,
+  onEdit,
 }: {
   object: CadObject;
   objects: CadObject[];
   unit: number;
+  onEdit: (value: number) => void;
 }) {
   let x = 0;
   let y = 0;
@@ -1257,6 +1343,11 @@ function AutoDimensionOverlay({
       y={y}
       textAnchor="middle"
       fontSize={11 * unit}
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        const value = Number(window.prompt("Dimension (mm)", label));
+        if (Number.isFinite(value)) onEdit(value);
+      }}
     >
       {label}
     </text>
@@ -1333,5 +1424,31 @@ function ObjectHandles({
         />
       ))}
     </g>
+  );
+}
+
+function HoleHandles({
+  hole,
+  objects,
+  unit,
+  onStart,
+}: {
+  hole: Extract<CadObject, { type: "hole" }>;
+  objects: CadObject[];
+  unit: number;
+  onStart: (event: PointerEvent<SVGElement>) => void;
+}) {
+  const center = resolveHoleCenter(hole, objects);
+  if (!center) return null;
+  const distance = hole.shape === "circle" ? hole.radius : hole.width / 2;
+  const angle = (hole.rotation * Math.PI) / 180;
+  return (
+    <circle
+      className="selection-handle"
+      cx={center.x + Math.cos(angle) * distance}
+      cy={center.y + Math.sin(angle) * distance}
+      r={4 * unit}
+      onPointerDown={onStart}
+    />
   );
 }

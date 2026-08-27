@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { DimensionObject, EditorLevel, StitchObject } from "../types/cad";
+import type {
+  DimensionObject,
+  EditorLevel,
+  HoleObject,
+  StitchObject,
+} from "../types/cad";
 import {
   DEFAULT_LAYER_IDS,
   getAutomaticLayerId,
@@ -11,11 +16,13 @@ import {
 test("specialized objects use their automatic layers", () => {
   const stitch = { type: "stitch" } as StitchObject;
   const dimension = { type: "dimension" } as DimensionObject;
+  const hole = { type: "hole" } as HoleObject;
   assert.equal(getAutomaticLayerId(stitch, "custom"), DEFAULT_LAYER_IDS.stitch);
   assert.equal(
     getAutomaticLayerId(dimension, "custom"),
     DEFAULT_LAYER_IDS.dimensions,
   );
+  assert.equal(getAutomaticLayerId(hole, "custom"), DEFAULT_LAYER_IDS.holes);
 });
 
 test("level path follows parents from root to current context", () => {
