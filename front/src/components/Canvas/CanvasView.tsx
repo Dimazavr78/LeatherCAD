@@ -53,6 +53,7 @@ import {
   isPointInHost,
   moveHole,
   resolveHoleCenter,
+  setHoleCornerRadius,
 } from "../../editor/holes/holeGeometry";
 import { calculateVertexFillet } from "../../editor/geometry/pathMath";
 
@@ -110,6 +111,7 @@ type EditHandle =
   | { kind: "arc-start" }
   | { kind: "arc-end" }
   | { kind: "hole-size" }
+  | { kind: "hole-radius" }
   | {
       kind: "corner-radius";
       corner: keyof Extract<PathObject, { type: "rectangle" }>["cornerRadii"];
@@ -675,7 +677,8 @@ export function CanvasView(props: Props) {
       // canvas grid here makes short drags appear completely unresponsive.
       const point =
         interaction.type === "handle" &&
-        interaction.handle.kind === "corner-radius"
+        (interaction.handle.kind === "corner-radius" ||
+          interaction.handle.kind === "hole-radius")
           ? raw
           : snap(raw);
       if (interaction.type === "move")
@@ -742,6 +745,24 @@ export function CanvasView(props: Props) {
             interaction.startObject.shape === "circle"
               ? { ...interaction.startObject, radius: projected }
               : { ...interaction.startObject, width: projected * 2 },
+          );
+        }
+      } else if (
+        interaction.startObject.type === "hole" &&
+        interaction.handle.kind === "hole-radius"
+      ) {
+        const hole = interaction.startObject;
+        if (resolveHoleCenter(hole, props.referenceObjects)) {
+          const angle = (-hole.rotation * Math.PI) / 180;
+          const dx = point.x - interaction.startPointer.x;
+          const dy = point.y - interaction.startPointer.y;
+          const localX = dx * Math.cos(angle) - dy * Math.sin(angle);
+          const localY = dx * Math.sin(angle) + dy * Math.cos(angle);
+          props.onObjectUpdate(
+            setHoleCornerRadius(
+              hole,
+              hole.cornerRadius + (localX + localY) / 2,
+            ),
           );
         }
       } else if (
@@ -1039,7 +1060,7 @@ export function CanvasView(props: Props) {
                 }
                 onDimensionEdit={() => {
                   const value = window.prompt(
-                    "Width × Height (mm)",
+                    t("autoDimensions.widthHeightPrompt"),
                     `${selected.width} × ${selected.height}`,
                   );
                   if (!value) return;
@@ -1092,8 +1113,8 @@ export function CanvasView(props: Props) {
               hole={selected}
               objects={props.referenceObjects}
               unit={screenUnit}
-              onStart={(event) =>
-                startHandle(event, selected, { kind: "hole-size" })
+              onStart={(event, handle) =>
+                startHandle(event, selected, { kind: handle })
               }
             />
           )}
@@ -1312,17 +1333,19 @@ function AutoDimensionOverlay({
   unit: number;
   onEdit: (value: number) => void;
 }) {
+  const { t } = useTranslation();
+  const unitLabel = t("common.mm");
   let x = 0;
   let y = 0;
   let label = "";
   if (object.type === "circle") {
     x = object.cx;
     y = object.cy - object.radius - 12 * unit;
-    label = `Ø ${(object.radius * 2).toFixed(2)} mm`;
+    label = `Ø ${(object.radius * 2).toFixed(2)} ${unitLabel}`;
   } else if (object.type === "line") {
     x = (object.x1 + object.x2) / 2;
     y = (object.y1 + object.y2) / 2 - 10 * unit;
-    label = `${Math.hypot(object.x2 - object.x1, object.y2 - object.y1).toFixed(2)} mm`;
+    label = `${Math.hypot(object.x2 - object.x1, object.y2 - object.y1).toFixed(2)} ${unitLabel}`;
   } else if (object.type === "hole") {
     const center = resolveHoleCenter(object, objects);
     if (!center) return null;
@@ -1333,8 +1356,8 @@ function AutoDimensionOverlay({
       10 * unit;
     label =
       object.shape === "circle"
-        ? `Ø ${(object.radius * 2).toFixed(2)} mm`
-        : `${object.width.toFixed(2)} × ${object.height.toFixed(2)} mm`;
+        ? `Ø ${(object.radius * 2).toFixed(2)} ${unitLabel}`
+        : `${object.width.toFixed(2)} × ${object.height.toFixed(2)} ${unitLabel}`;
   } else return null;
   return (
     <text
@@ -1345,7 +1368,9 @@ function AutoDimensionOverlay({
       fontSize={11 * unit}
       onDoubleClick={(event) => {
         event.stopPropagation();
-        const value = Number(window.prompt("Dimension (mm)", label));
+        const value = Number(
+          window.prompt(t("autoDimensions.valuePrompt"), label),
+        );
         if (Number.isFinite(value)) onEdit(value);
       }}
     >
@@ -1436,19 +1461,42 @@ function HoleHandles({
   hole: Extract<CadObject, { type: "hole" }>;
   objects: CadObject[];
   unit: number;
-  onStart: (event: PointerEvent<SVGElement>) => void;
+  onStart: (
+    event: PointerEvent<SVGElement>,
+    handle: "hole-size" | "hole-radius",
+  ) => void;
 }) {
   const center = resolveHoleCenter(hole, objects);
   if (!center) return null;
   const distance = hole.shape === "circle" ? hole.radius : hole.width / 2;
   const angle = (hole.rotation * Math.PI) / 180;
+  const rotate = (x: number, y: number) => ({
+    x: center.x + x * Math.cos(angle) - y * Math.sin(angle),
+    y: center.y + x * Math.sin(angle) + y * Math.cos(angle),
+  });
+  const size = rotate(distance, 0);
+  const radius = rotate(
+    -hole.width / 2 + Math.max(hole.cornerRadius, 10 * unit),
+    -hole.height / 2 + Math.max(hole.cornerRadius, 10 * unit),
+  );
   return (
-    <circle
-      className="selection-handle"
-      cx={center.x + Math.cos(angle) * distance}
-      cy={center.y + Math.sin(angle) * distance}
-      r={4 * unit}
-      onPointerDown={onStart}
-    />
+    <g>
+      <circle
+        className="selection-handle"
+        cx={size.x}
+        cy={size.y}
+        r={4 * unit}
+        onPointerDown={(event) => onStart(event, "hole-size")}
+      />
+      {hole.shape === "rectangle" && (
+        <circle
+          className="radius-handle"
+          cx={radius.x}
+          cy={radius.y}
+          r={4 * unit}
+          onPointerDown={(event) => onStart(event, "hole-radius")}
+        />
+      )}
+    </g>
   );
 }

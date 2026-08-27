@@ -7,6 +7,13 @@ export const DEFAULT_LAYER_IDS = {
   dimensions: "layer-dimensions",
   construction: "layer-construction",
 } as const;
+export const DEFAULT_LAYER_TRANSLATION_KEYS: Record<string, string> = {
+  [DEFAULT_LAYER_IDS.geometry]: "layers.defaults.geometry",
+  [DEFAULT_LAYER_IDS.holes]: "layers.defaults.holes",
+  [DEFAULT_LAYER_IDS.stitch]: "layers.defaults.stitch",
+  [DEFAULT_LAYER_IDS.dimensions]: "layers.defaults.dimensions",
+  [DEFAULT_LAYER_IDS.construction]: "layers.defaults.construction",
+};
 export const ROOT_LEVEL_ID = "level-root";
 
 export const DEFAULT_LAYERS: CadLayer[] = [

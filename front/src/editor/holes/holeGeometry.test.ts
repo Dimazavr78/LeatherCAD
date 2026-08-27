@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { HoleObject, RectangleObject } from "../../types/cad";
-import { createHolePath, resolveHoleCenter } from "./holeGeometry";
+import {
+  createHolePath,
+  resolveHoleCenter,
+  setHoleCornerRadius,
+} from "./holeGeometry";
 import { getPathLength } from "../geometry/pathMath";
 
 const host: RectangleObject = {
@@ -39,4 +43,15 @@ test("relative hole remains centered in its host", () => {
 test("hole stitch offset expands toward host material", () => {
   const path = createHolePath(hole, [host, hole], 3)!;
   assert.ok(Math.abs(getPathLength(path) - 2 * Math.PI * 13) < 1e-8);
+});
+
+test("rectangular hole corner radius snaps and stays within its bounds", () => {
+  const rectangular = {
+    ...hole,
+    shape: "rectangle" as const,
+    width: 20,
+    height: 10,
+  };
+  assert.equal(setHoleCornerRadius(rectangular, 2.26).cornerRadius, 2.5);
+  assert.equal(setHoleCornerRadius(rectangular, 50).cornerRadius, 5);
 });

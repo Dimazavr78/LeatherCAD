@@ -113,7 +113,9 @@
       "offsetY": "Отступ по вертикали",
       "constrainToHost": "Ограничить внутри детали",
       "horizontalEdge": "Горизонтальный край",
-      "verticalEdge": "Вертикальный край"
+      "verticalEdge": "Вертикальный край",
+      "xRatio": "Доля по горизонтали",
+      "yRatio": "Доля по вертикали"
     },
     "options": {
       "fixed-spacing": "Фиксированный шаг",
@@ -151,13 +153,27 @@
       "missingSource": "Источник отсутствует",
       "stitch-too-close-edge": "Шов слишком близко к внешнему краю"
     },
-    "actions": { "addStitchAroundHole": "Добавить шов вокруг отверстия" }
+    "actions": { "addStitchAroundHole": "Добавить шов вокруг отверстия" },
+    "presets": {
+      "fine": "Тонкий",
+      "small": "Малый",
+      "medium": "Средний",
+      "large": "Крупный",
+      "heavy": "Тяжёлый"
+    }
   },
   "layers": {
     "title": "Слои",
     "layer": "Слой",
     "active": "Активный слой",
-    "rename": "Переименовать слой"
+    "rename": "Переименовать слой",
+    "defaults": {
+      "geometry": "Геометрия",
+      "holes": "Отверстия",
+      "stitch": "Швы",
+      "dimensions": "Размеры",
+      "construction": "Вспомогательные"
+    }
   },
   "levels": {
     "title": "Уровни",
@@ -165,9 +181,14 @@
     "new": "Создать уровень",
     "rename": "Переименовать",
     "open": "Открыть",
-    "back": "Назад"
+    "back": "Назад",
+    "root": "Проект"
   },
   "measure": { "distance": "Расстояние", "angle": "Угол" },
+  "autoDimensions": {
+    "widthHeightPrompt": "Ширина × высота (мм)",
+    "valuePrompt": "Размер (мм)"
+  },
   "canvas": {
     "title": "Холст",
     "grid": "Сетка",

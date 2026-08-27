@@ -107,7 +107,9 @@
       "offsetY": "Vertical edge offset",
       "constrainToHost": "Constrain inside object",
       "horizontalEdge": "Horizontal edge",
-      "verticalEdge": "Vertical edge"
+      "verticalEdge": "Vertical edge",
+      "xRatio": "Horizontal ratio",
+      "yRatio": "Vertical ratio"
     },
     "options": {
       "fixed-spacing": "Fixed spacing",
@@ -145,13 +147,27 @@
       "missingSource": "Missing source",
       "stitch-too-close-edge": "Stitch is too close to the outer edge"
     },
-    "actions": { "addStitchAroundHole": "Add Stitch Around Hole" }
+    "actions": { "addStitchAroundHole": "Add Stitch Around Hole" },
+    "presets": {
+      "fine": "Fine",
+      "small": "Small",
+      "medium": "Medium",
+      "large": "Large",
+      "heavy": "Heavy"
+    }
   },
   "layers": {
     "title": "Layers",
     "layer": "Layer",
     "active": "Active layer",
-    "rename": "Rename layer"
+    "rename": "Rename layer",
+    "defaults": {
+      "geometry": "Geometry",
+      "holes": "Holes",
+      "stitch": "Stitch",
+      "dimensions": "Dimensions",
+      "construction": "Construction"
+    }
   },
   "levels": {
     "title": "Levels",
@@ -159,9 +175,14 @@
     "new": "New level",
     "rename": "Rename level",
     "open": "Open",
-    "back": "Back"
+    "back": "Back",
+    "root": "Project"
   },
   "measure": { "distance": "Distance", "angle": "Angle" },
+  "autoDimensions": {
+    "widthHeightPrompt": "Width × Height (mm)",
+    "valuePrompt": "Dimension (mm)"
+  },
   "canvas": {
     "title": "Canvas",
     "grid": "Grid",

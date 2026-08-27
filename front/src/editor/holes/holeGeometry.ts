@@ -129,6 +129,20 @@ export function moveHole(
   };
 }
 
+export function setHoleCornerRadius(
+  hole: HoleObject,
+  requestedRadius: number,
+  step = 0.5,
+): HoleObject {
+  return {
+    ...hole,
+    cornerRadius: Math.min(
+      Math.min(hole.width, hole.height) / 2,
+      Math.max(0, Math.round(requestedRadius / step) * step),
+    ),
+  };
+}
+
 export function createHolePath(
   hole: HoleObject,
   objects: CadObject[],

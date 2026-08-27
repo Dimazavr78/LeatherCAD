@@ -17,6 +17,7 @@ import {
 import { generateStitch } from "../../editor/stitch/stitchMath";
 import { getDimensionValue } from "../../editor/dimensions/dimensionMath";
 import { normalizeRectangleCornerRadii } from "../../editor/geometry/rectangleGeometry";
+import { DEFAULT_LAYER_TRANSLATION_KEYS } from "../../editor/projectModel";
 import {
   createHolePath,
   getObjectBounds,
@@ -371,7 +372,9 @@ function ObjectProperties({
           >
             {layers.map((layer) => (
               <option key={layer.id} value={layer.id}>
-                {layer.name}
+                {DEFAULT_LAYER_TRANSLATION_KEYS[layer.id]
+                  ? t(DEFAULT_LAYER_TRANSLATION_KEYS[layer.id])
+                  : layer.name}
               </option>
             ))}
           </select>
@@ -389,7 +392,7 @@ function ObjectProperties({
           >
             {levels.map((level) => (
               <option key={level.id} value={level.id}>
-                {level.name}
+                {level.id === "level-root" ? t("levels.root") : level.name}
               </option>
             ))}
           </select>
@@ -561,7 +564,7 @@ function HoleProperties({
         {position.mode === "relative" && (
           <>
             <NumericProperty
-              label="X ratio"
+              label={t("properties.fields.xRatio")}
               value={position.xRatio}
               min={0}
               unit=""
@@ -576,7 +579,7 @@ function HoleProperties({
               {...events}
             />
             <NumericProperty
-              label="Y ratio"
+              label={t("properties.fields.yRatio")}
               value={position.yRatio}
               min={0}
               unit=""
@@ -803,7 +806,7 @@ function StitchProperties({
         <span>{t("properties.fields.source")}</span>
         <strong>
           {source
-            ? `${source.type} #${source.id.slice(0, 6)}`
+            ? `${t(`properties.${source.type}.title`)} #${source.id.slice(0, 6)}`
             : t("properties.warnings.missingSource")}
         </strong>
       </div>
@@ -831,11 +834,13 @@ function StitchProperties({
           }
           onBlur={events.onEditCommit}
         >
-          <option value={2.5}>Fine — 2.5 mm</option>
-          <option value={3}>Small — 3.0 mm</option>
-          <option value={3.38}>Medium — 3.38 mm</option>
-          <option value={4}>Large — 4.0 mm</option>
-          <option value={5}>Heavy — 5.0 mm</option>
+          <option value={2.5}>{t("properties.presets.fine")} — 2.5 mm</option>
+          <option value={3}>{t("properties.presets.small")} — 3.0 mm</option>
+          <option value={3.38}>
+            {t("properties.presets.medium")} — 3.38 mm
+          </option>
+          <option value={4}>{t("properties.presets.large")} — 4.0 mm</option>
+          <option value={5}>{t("properties.presets.heavy")} — 5.0 mm</option>
         </select>
         <Select
           label={t("properties.fields.mode")}

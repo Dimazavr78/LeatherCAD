@@ -33,6 +33,7 @@ import { TopBar } from "./TopBar";
 import {
   DEFAULT_LAYERS,
   ROOT_LEVEL,
+  ROOT_LEVEL_ID,
   getAutomaticLayerId,
   getLevelPath,
 } from "../../editor/projectModel";
@@ -394,7 +395,7 @@ export function AppShell() {
             {levelPath.map((level, index) => (
               <button key={level.id} onClick={() => setCurrentLevel(level.id)}>
                 {index > 0 && "› "}
-                {level.name}
+                {level.id === ROOT_LEVEL_ID ? t("levels.root") : level.name}
               </button>
             ))}
           </nav>

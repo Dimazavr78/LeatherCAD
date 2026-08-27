@@ -1,6 +1,10 @@
 import { useTranslation } from "react-i18next";
 import type { CadLayer, EditorLevel } from "../../types/cad";
-import { getLevelPath } from "../../editor/projectModel";
+import {
+  DEFAULT_LAYER_TRANSLATION_KEYS,
+  getLevelPath,
+  ROOT_LEVEL_ID,
+} from "../../editor/projectModel";
 
 interface Props {
   layers: CadLayer[];
@@ -28,6 +32,12 @@ export function ProjectPanel(props: Props) {
         layer.id === id ? { ...layer, ...patch } : layer,
       ),
     );
+  const layerName = (layer: CadLayer) =>
+    DEFAULT_LAYER_TRANSLATION_KEYS[layer.id]
+      ? t(DEFAULT_LAYER_TRANSLATION_KEYS[layer.id])
+      : layer.name;
+  const levelName = (level: EditorLevel) =>
+    level.id === ROOT_LEVEL_ID ? t("levels.root") : level.name;
   const moveLayer = (id: string, delta: number) => {
     const sorted = [...props.layers].sort((a, b) => a.order - b.order);
     const index = sorted.findIndex((layer) => layer.id === id);
@@ -59,11 +69,14 @@ export function ProjectPanel(props: Props) {
               className="project-row-name"
               onClick={() => props.onActiveLayerChange(layer.id)}
               onDoubleClick={() => {
-                const name = window.prompt(t("layers.rename"), layer.name);
+                const name = window.prompt(
+                  t("layers.rename"),
+                  layerName(layer),
+                );
                 if (name?.trim()) updateLayer(layer.id, { name: name.trim() });
               }}
             >
-              {layer.name}
+              {layerName(layer)}
             </button>
             <button onClick={() => moveLayer(layer.id, 1)}>↑</button>
             <button onClick={() => moveLayer(layer.id, -1)}>↓</button>
@@ -104,7 +117,7 @@ export function ProjectPanel(props: Props) {
               className="project-row-name"
               onDoubleClick={() => props.onCurrentLevelChange(level.id)}
             >
-              {level.name}
+              {levelName(level)}
             </button>
             <button
               onClick={() => {
@@ -143,7 +156,7 @@ export function ProjectPanel(props: Props) {
         </button>
         <div className="level-path-small">
           {getLevelPath(props.levels, props.currentLevelId)
-            .map((level) => level.name)
+            .map(levelName)
             .join(" › ")}
         </div>
       </section>
