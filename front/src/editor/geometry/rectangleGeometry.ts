@@ -46,6 +46,35 @@ export function normalizedRectangle(
   };
 }
 
+export function changeRectangleCornerRadius(
+  rectangle: RectangleObject,
+  corner: keyof RectangleCornerRadii,
+  delta: number,
+  step = 0.5,
+): RectangleObject {
+  const radius = Math.max(
+    0,
+    Math.round((rectangle.cornerRadii[corner] + delta) / step) * step,
+  );
+  const requested = rectangle.linkCorners
+    ? {
+        topLeft: radius,
+        topRight: radius,
+        bottomRight: radius,
+        bottomLeft: radius,
+      }
+    : { ...rectangle.cornerRadii, [corner]: radius };
+
+  return {
+    ...rectangle,
+    cornerRadii: normalizeRectangleCornerRadii(
+      rectangle.width,
+      rectangle.height,
+      requested,
+    ),
+  };
+}
+
 export function getRectanglePerimeter(rectangle: RectangleObject): number {
   const radii = normalizeRectangleCornerRadii(
     rectangle.width,

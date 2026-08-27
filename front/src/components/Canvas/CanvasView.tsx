@@ -36,8 +36,11 @@ import {
   type ViewBox,
 } from "./canvasMath";
 import { resizeRectangle } from "./rectangleMath";
-import { ZERO_CORNER_RADII } from "../../editor/geometry/rectangleGeometry";
-import { normalizeRectangleCornerRadii } from "../../editor/geometry/rectangleGeometry";
+import {
+  changeRectangleCornerRadius,
+  normalizeRectangleCornerRadii,
+  ZERO_CORNER_RADII,
+} from "../../editor/geometry/rectangleGeometry";
 import {
   getObjectAnchors,
   driveDimensionValue,
@@ -635,7 +638,13 @@ export function CanvasView(props: Props) {
       interaction.type !== "idle" &&
       interaction.pointerId === event.pointerId
     ) {
-      const point = snap(raw);
+      // Radius already has its own 0.5 mm step. Applying the much coarser
+      // canvas grid here makes short drags appear completely unresponsive.
+      const point =
+        interaction.type === "handle" &&
+        interaction.handle.kind === "corner-radius"
+          ? raw
+          : snap(raw);
       if (interaction.type === "move")
         if (interaction.startObject.type === "dimension") {
           const deltaX = point.x - interaction.startPointer.x;
@@ -681,26 +690,9 @@ export function CanvasView(props: Props) {
           ((point.x - interaction.startPointer.x) * direction.x +
             (point.y - interaction.startPointer.y) * direction.y) /
           2;
-        const radius = Math.max(
-          0,
-          Math.round((rectangle.cornerRadii[corner] + delta) * 2) / 2,
+        props.onObjectUpdate(
+          changeRectangleCornerRadius(rectangle, corner, delta),
         );
-        const requested = rectangle.linkCorners
-          ? {
-              topLeft: radius,
-              topRight: radius,
-              bottomRight: radius,
-              bottomLeft: radius,
-            }
-          : { ...rectangle.cornerRadii, [corner]: radius };
-        props.onObjectUpdate({
-          ...rectangle,
-          cornerRadii: normalizeRectangleCornerRadii(
-            rectangle.width,
-            rectangle.height,
-            requested,
-          ),
-        });
       } else
         props.onObjectUpdate(
           updateHandle(interaction.startObject, interaction.handle, point),

@@ -14,6 +14,7 @@ import {
 } from "../dimensions/dimensionMath";
 import { createPath, getPathLength, calculateVertexFillet } from "./pathMath";
 import {
+  changeRectangleCornerRadius,
   getRectanglePerimeter,
   normalizeRectangleCornerRadii,
 } from "./rectangleGeometry";
@@ -51,6 +52,21 @@ test("sharp and rounded rectangle paths have exact perimeters", () => {
       getPathLength(createPath(rounded)!) - getRectanglePerimeter(rounded),
     ) < 1e-9,
   );
+});
+
+test("corner radius reacts to a sub-grid drag and respects linked corners", () => {
+  const rounded = changeRectangleCornerRadius(
+    rectangle(100, 70, 0),
+    "topLeft",
+    1.2,
+  );
+
+  assert.deepEqual(rounded.cornerRadii, {
+    topLeft: 1,
+    topRight: 1,
+    bottomRight: 1,
+    bottomLeft: 1,
+  });
 });
 
 test("invalid rectangle radii are non-negative and side-safe", () => {
