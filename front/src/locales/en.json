@@ -263,7 +263,8 @@
     "backstitch": "Backstitch",
     "showHoleNumbers": "Show Hole Numbers",
     "holePair": "Hole {{a}} ↔ Hole {{b}} · Deviation: {{deviation}} mm",
-    "maxAverage": "Maximum {{max}} mm · Average {{average}} mm"
+    "maxAverage": "Maximum {{max}} mm · Average {{average}} mm",
+    "syncPreview": "Current: A {{currentA}} / B {{currentB}} holes\nProposed: A {{proposed}} / B {{proposed}} holes\nMaximum spacing deviation: {{deviation}}%\n\nApply synchronization?"
   },
   "objects": { "locked": "Locked", "unlocked": "Unlocked" },
   "levels": {

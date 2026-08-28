@@ -1060,20 +1060,37 @@ function SeamPairProperties({
         stitchB.spacing,
       ).holeCount;
     if (count < 2) return;
+    const spacingA = generatedA.pathLength / count;
+    const spacingB = generatedB.pathLength / count;
+    const maxDeviation = Math.max(
+      (Math.abs(spacingA - stitchA.spacing) / stitchA.spacing) * 100,
+      (Math.abs(spacingB - stitchB.spacing) / stitchB.spacing) * 100,
+    );
+    if (
+      !window.confirm(
+        t("seams.syncPreview", {
+          currentA: generatedA.holes.length,
+          currentB: generatedB.holes.length,
+          proposed: count,
+          deviation: maxDeviation.toFixed(1),
+        }),
+      )
+    )
+      return;
     events.onEditStart();
     if (mode !== "b")
       onChange(stitchB.id, {
         mode: "fit-evenly",
         alignment: "center",
         cornerMode: "continuous",
-        spacing: generatedB.pathLength / count,
+        spacing: spacingB,
       });
     if (mode !== "a")
       onChange(stitchA.id, {
         mode: "fit-evenly",
         alignment: "center",
         cornerMode: "continuous",
-        spacing: generatedA.pathLength / count,
+        spacing: spacingA,
       });
     events.onEditCommit();
   };

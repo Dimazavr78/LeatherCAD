@@ -269,7 +269,8 @@
     "backstitch": "Закрепочных стежков",
     "showHoleNumbers": "Показывать номера отверстий",
     "holePair": "Отверстие {{a}} ↔ отверстие {{b}} · Отклонение: {{deviation}} мм",
-    "maxAverage": "Максимум {{max}} мм · Среднее {{average}} мм"
+    "maxAverage": "Максимум {{max}} мм · Среднее {{average}} мм",
+    "syncPreview": "Сейчас: A {{currentA}} / B {{currentB}} отверстий\nПредлагается: A {{proposed}} / B {{proposed}} отверстий\nМаксимальное отклонение шага: {{deviation}}%\n\nПрименить синхронизацию?"
   },
   "objects": { "locked": "Заблокировано", "unlocked": "Разблокировано" },
   "levels": {

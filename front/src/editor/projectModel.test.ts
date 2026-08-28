@@ -10,6 +10,7 @@ import {
   DEFAULT_LAYER_IDS,
   getAutomaticLayerId,
   getLevelPath,
+  isObjectEditable,
   ROOT_LEVEL_ID,
 } from "./projectModel";
 
@@ -35,4 +36,14 @@ test("level path follows parents from root to current context", () => {
     getLevelPath(levels, "pocket").map((level) => level.name),
     ["Project", "Front", "Pocket"],
   );
+});
+
+test("object and layer locks combine into effective editability", () => {
+  const unlocked = { type: "line", locked: false } as Parameters<
+    typeof isObjectEditable
+  >[0];
+  assert.equal(isObjectEditable(unlocked, false), true);
+  assert.equal(isObjectEditable({ ...unlocked, locked: true }, false), false);
+  assert.equal(isObjectEditable(unlocked, true), false);
+  assert.equal(isObjectEditable(unlocked, false, true), false);
 });

@@ -64,6 +64,14 @@ export const ROOT_LEVEL: EditorLevel = {
   parentId: null,
 };
 
+export function isObjectEditable(
+  object: CadObject,
+  layerLocked: boolean,
+  owningPartLocked = false,
+): boolean {
+  return !object.locked && !layerLocked && !owningPartLocked;
+}
+
 export function getAutomaticLayerId(
   object: CadObject,
   activeLayerId: string,

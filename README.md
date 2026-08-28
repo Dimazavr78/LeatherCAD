@@ -6,7 +6,7 @@
 
 [English](README.md) · [Русский](README.ru.md)
 
-![Version](https://img.shields.io/badge/version-0.0.12-d8b36a)
+![Version](https://img.shields.io/badge/version-0.0.13-d8b36a)
 ![React](https://img.shields.io/badge/React-19-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6)
 ![Status](https://img.shields.io/badge/status-early%20development-orange)
@@ -16,7 +16,7 @@
 LeatherCAD is an open-source-oriented CAD application for designing leather patterns directly in the browser. It combines precise geometry, associative dimensions, stitching layouts, holes, layers, and an infinite SVG canvas in one focused workspace.
 
 > [!IMPORTANT]
-> LeatherCAD is in early development. Version `0.0.12` is suitable for experimentation, but project persistence, file export, and production manufacturing workflows are not implemented yet.
+> LeatherCAD is in early development. Version `0.0.13` is suitable for experimentation, but project persistence, file export, and production manufacturing workflows are not implemented yet.
 
 ## Highlights
 
@@ -32,6 +32,8 @@ LeatherCAD is an open-source-oriented CAD application for designing leather patt
 - English and Russian interface localization.
 - Semantic leather Parts that reference existing closed contours without duplicating geometry.
 - Built-in and custom materials, thickness overrides, material preview, cut metrics, and Part validation.
+- Associative seam pairs with hole-count, length, tolerance, deviation, direction, and compatibility analysis.
+- Visual seam inspection, stitch start/direction/numbering, backstitch metadata, synchronization, Best Fit, and per-object locking.
 
 ## Quick start
 
@@ -72,17 +74,17 @@ npm run preview --workspace=front   # Preview the production frontend
 
 ### Navigation and shortcuts
 
-| Action | Control |
-|---|---|
-| Pan | Middle mouse button or `Shift` + left drag |
-| Zoom | Mouse wheel |
-| Undo / Redo | `Ctrl+Z` / `Ctrl+Y` |
-| Copy / Paste | `Ctrl+C` / `Ctrl+V` |
-| Duplicate | `Ctrl+D` |
-| Delete | `Delete` or `Backspace` |
-| Nudge | Arrow keys |
-| Large nudge | `Shift` + arrow keys |
-| Cancel operation | `Esc` |
+| Action           | Control                                    |
+| ---------------- | ------------------------------------------ |
+| Pan              | Middle mouse button or `Shift` + left drag |
+| Zoom             | Mouse wheel                                |
+| Undo / Redo      | `Ctrl+Z` / `Ctrl+Y`                        |
+| Copy / Paste     | `Ctrl+C` / `Ctrl+V`                        |
+| Duplicate        | `Ctrl+D`                                   |
+| Delete           | `Delete` or `Backspace`                    |
+| Nudge            | Arrow keys                                 |
+| Large nudge      | `Shift` + arrow keys                       |
+| Cancel operation | `Esc`                                      |
 
 ## Associative model
 
@@ -120,6 +122,7 @@ LeatherCAD/
 ## Current limitations
 
 - No Save/Open or `.lcad` project format.
+- Seam inspection compares normalized stitch sequences; it does not simulate leather deformation or 3D folding.
 - No DXF or PDF export.
 - No boolean operations, Trim, Extend, 3D, or assembly system.
 - Custom holes converted from polylines are not implemented yet.

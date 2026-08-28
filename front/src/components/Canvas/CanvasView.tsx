@@ -320,6 +320,8 @@ export function CanvasView(props: Props) {
     setDimensionDraft(null);
     setMeasureDraft(null);
     setSnapMarker(null);
+    setFirstSeamStitchId(null);
+    if (selected?.type === "seamPair") props.onSelectionChange(null);
   };
   useEffect(() => {
     window.addEventListener("leathercad:cancel", cancel);
