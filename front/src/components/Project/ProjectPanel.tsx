@@ -1,10 +1,21 @@
 import { useTranslation } from "react-i18next";
-import type { CadLayer, EditorLevel } from "../../types/cad";
+import type {
+  CadLayer,
+  CadObject,
+  EditorLevel,
+  Material,
+  RenderMode,
+} from "../../types/cad";
 import {
   DEFAULT_LAYER_TRANSLATION_KEYS,
   getLevelPath,
   ROOT_LEVEL_ID,
 } from "../../editor/projectModel";
+import {
+  getPartDimensions,
+  getPartGeometry,
+  getPartStitches,
+} from "../../editor/parts/partGeometry";
 
 interface Props {
   layers: CadLayer[];
@@ -15,6 +26,13 @@ interface Props {
   onActiveLayerChange: (id: string) => void;
   onLevelsChange: (levels: EditorLevel[]) => void;
   onCurrentLevelChange: (id: string) => void;
+  objects: CadObject[];
+  materials: Material[];
+  selectedObjectId: string | null;
+  renderMode: RenderMode;
+  onSelectionChange: (id: string) => void;
+  onMaterialsChange: (materials: Material[]) => void;
+  onRenderModeChange: (mode: RenderMode) => void;
 }
 
 export function ProjectPanel(props: Props) {
@@ -26,6 +44,7 @@ export function ProjectPanel(props: Props) {
   const current = props.levels.find(
     (level) => level.id === props.currentLevelId,
   );
+  const parts = props.objects.filter((object) => object.type === "part");
   const updateLayer = (id: string, patch: Partial<CadLayer>) =>
     props.onLayersChange(
       props.layers.map((layer) =>
@@ -159,6 +178,159 @@ export function ProjectPanel(props: Props) {
             .map(levelName)
             .join(" › ")}
         </div>
+      </section>
+      <section>
+        <div className="section-title">{t("parts.title").toUpperCase()}</div>
+        {parts.length === 0 && (
+          <div className="project-empty">{t("parts.empty")}</div>
+        )}
+        {parts.map((part) => {
+          const geometry = getPartGeometry(part, props.objects);
+          const stitches = getPartStitches(part, props.objects);
+          const dimensions = getPartDimensions(part, props.objects);
+          const children = [
+            ...(geometry?.holes ?? []),
+            ...stitches,
+            ...dimensions,
+          ];
+          return (
+            <div className="part-tree" key={part.id}>
+              <button
+                className={`project-row-name part-tree-root ${props.selectedObjectId === part.id ? "project-row--active" : ""}`}
+                onClick={() => props.onSelectionChange(part.id)}
+              >
+                ◇ {part.name}
+              </button>
+              <button
+                className="part-tree-child"
+                onClick={() => props.onSelectionChange(part.contourSourceId)}
+              >
+                ├─ {t("parts.outerContour")}
+              </button>
+              {children.map((child, index) => (
+                <button
+                  key={child.id}
+                  className="part-tree-child"
+                  onClick={() => props.onSelectionChange(child.id)}
+                >
+                  {index === children.length - 1 ? "└─" : "├─"}{" "}
+                  {t(`properties.${child.type}.title`)} #{child.id.slice(0, 6)}
+                </button>
+              ))}
+            </div>
+          );
+        })}
+      </section>
+      <section>
+        <div className="section-title">
+          {t("materials.title").toUpperCase()}
+        </div>
+        <label className="project-select-label">
+          {t("materials.renderMode")}
+          <select
+            className="property-select"
+            value={props.renderMode}
+            onChange={(event) =>
+              props.onRenderModeChange(event.target.value as RenderMode)
+            }
+          >
+            <option value="wireframe">{t("materials.wireframe")}</option>
+            <option value="material">{t("materials.preview")}</option>
+          </select>
+        </label>
+        {props.materials.map((material) => (
+          <div className="project-row" key={material.id}>
+            <span
+              className="material-swatch"
+              style={{ backgroundColor: material.color ?? "transparent" }}
+            />
+            <button
+              className="project-row-name"
+              onDoubleClick={() => {
+                const name = window.prompt(
+                  t("materials.rename"),
+                  material.presetKey ? t(material.presetKey) : material.name,
+                );
+                if (name?.trim())
+                  props.onMaterialsChange(
+                    props.materials.map((item) =>
+                      item.id === material.id
+                        ? {
+                            ...item,
+                            name: name.trim(),
+                            presetKey: undefined,
+                            builtIn: false,
+                          }
+                        : item,
+                    ),
+                  );
+              }}
+            >
+              {material.presetKey ? t(material.presetKey) : material.name} ·{" "}
+              {material.thickness} {t("common.mm")}
+            </button>
+            <button
+              title={t("materials.edit")}
+              onClick={() => {
+                const thickness = Number(
+                  window.prompt(
+                    t("materials.thickness"),
+                    String(material.thickness),
+                  ),
+                );
+                if (!(thickness > 0)) return;
+                const color =
+                  window.prompt(
+                    t("materials.color"),
+                    material.color ?? "#8c6548",
+                  ) ?? material.color;
+                const notes =
+                  window.prompt(t("materials.notes"), material.notes ?? "") ??
+                  material.notes;
+                props.onMaterialsChange(
+                  props.materials.map((item) =>
+                    item.id === material.id
+                      ? { ...item, thickness, color, notes }
+                      : item,
+                  ),
+                );
+              }}
+            >
+              ✎
+            </button>
+            <button
+              disabled={props.objects.some(
+                (object) =>
+                  object.type === "part" && object.materialId === material.id,
+              )}
+              title={t("materials.delete")}
+              onClick={() =>
+                props.onMaterialsChange(
+                  props.materials.filter((item) => item.id !== material.id),
+                )
+              }
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        <button
+          className="project-add"
+          onClick={() =>
+            props.onMaterialsChange([
+              ...props.materials,
+              {
+                id: crypto.randomUUID(),
+                name: `${t("materials.custom")} ${props.materials.length + 1}`,
+                category: "leather",
+                thickness: 1.5,
+                color: "#8c6548",
+              },
+            ])
+          }
+        >
+          + {t("materials.add")}
+        </button>
       </section>
     </div>
   );

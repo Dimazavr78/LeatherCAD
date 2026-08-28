@@ -158,10 +158,40 @@ export interface HoleObject extends CadObjectMetadata {
   constrainToHost: boolean;
   customSourceObjectId?: string;
 }
+export interface PartManufacturingSettings {
+  edgeAllowance?: number;
+  skivingAllowance?: number;
+}
+export interface PartExportSettings {
+  exportOuterContour: boolean;
+  exportHoles: boolean;
+  exportStitch: boolean;
+}
+export interface PartObject extends CadObjectMetadata {
+  id: string;
+  type: "part";
+  name: string;
+  contourSourceId: string;
+  materialId: string | null;
+  thicknessOverride?: number;
+  manufacturing: PartManufacturingSettings;
+  exportSettings: PartExportSettings;
+}
+export interface Material {
+  id: string;
+  name: string;
+  category: "leather";
+  thickness: number;
+  color?: string;
+  notes?: string;
+  presetKey?: string;
+  builtIn?: boolean;
+}
+export type RenderMode = "wireframe" | "material";
 export type PathObject =
   RectangleObject | LineObject | PolylineObject | CircleObject | ArcObject;
 export type CadObject =
-  PathObject | HoleObject | StitchObject | DimensionObject;
+  PathObject | HoleObject | PartObject | StitchObject | DimensionObject;
 export type CadObjectType = CadObject["type"];
 export type Tool =
   | "select"
@@ -172,6 +202,7 @@ export type Tool =
   | "arc"
   | "stitch"
   | "hole"
+  | "part"
   | "fillet"
   | "dimension"
   | "measure";

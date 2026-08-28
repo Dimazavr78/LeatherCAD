@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { CadLayer, CadObject, EditorLevel } from "../../types/cad";
+import type {
+  CadLayer,
+  CadObject,
+  EditorLevel,
+  Material,
+  RenderMode,
+} from "../../types/cad";
 
 export interface EditorDocumentState {
   objects: CadObject[];
@@ -7,6 +13,8 @@ export interface EditorDocumentState {
   levels: EditorLevel[];
   activeLayerId: string;
   currentLevelId: string;
+  materials: Material[];
+  renderMode: RenderMode;
 }
 
 interface HistoryState {

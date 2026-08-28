@@ -22,7 +22,8 @@ export function resolveGeometryReference(
     !object ||
     object.type === "stitch" ||
     object.type === "dimension" ||
-    object.type === "hole"
+    object.type === "hole" ||
+    object.type === "part"
   )
     return reference.point ?? null;
   if (object.type === "line") {

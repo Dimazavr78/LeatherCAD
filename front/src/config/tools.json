@@ -69,7 +69,7 @@
     "id": "part",
     "icon": "◇",
     "category": "leather",
-    "enabled": false,
+    "enabled": true,
     "localization": {
       "enabled": true,
       "label": "toolbar.part.label",

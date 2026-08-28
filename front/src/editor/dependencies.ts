@@ -10,6 +10,7 @@ export function directlyDependsOn(
       object.hostObjectId === sourceId ||
       object.customSourceObjectId === sourceId
     );
+  if (object.type === "part") return object.contourSourceId === sourceId;
   if (object.type === "dimension")
     return (
       object.referenceA.objectId === sourceId ||

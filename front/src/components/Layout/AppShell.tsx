@@ -38,6 +38,12 @@ import {
   getLevelPath,
 } from "../../editor/projectModel";
 import { ProjectPanel } from "../Project/ProjectPanel";
+import { DEFAULT_MATERIALS } from "../../editor/materials";
+import {
+  getPartDimensions,
+  getPartGeometry,
+  getPartStitches,
+} from "../../editor/parts/partGeometry";
 
 const PASTE_OFFSET = 10;
 const NUDGE_SMALL = 1;
@@ -62,10 +68,13 @@ export function AppShell() {
     levels: [ROOT_LEVEL],
     activeLayerId: DEFAULT_LAYERS[0].id,
     currentLevelId: ROOT_LEVEL.id,
+    materials: DEFAULT_MATERIALS,
+    renderMode: "wireframe",
   });
   const objects = state.objects;
   const layers = state.layers;
   const levels = state.levels;
+  const materials = state.materials;
   const [activeTool, setActiveTool] = useState<Tool>("select");
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const [clipboard, setClipboard] = useState<CadObject[]>([]);
@@ -87,6 +96,7 @@ export function AppShell() {
   const visibleObjects = objects
     .filter(
       (object) =>
+        object.type !== "part" &&
         object.levelId === state.currentLevelId &&
         (layerById.get(object.layerId ?? "")?.visible ?? true),
     )
@@ -108,13 +118,26 @@ export function AppShell() {
     ? lockedObjectIds.has(selectedObject.id)
     : false;
   const relatedObjectIds = selectedObject
-    ? objects
-        .filter(
-          (object) =>
-            dependsOnObject(object, selectedObject.id) ||
-            dependsOnObject(selectedObject, object.id),
-        )
-        .map((object) => object.id)
+    ? selectedObject.type === "part"
+      ? [
+          selectedObject.contourSourceId,
+          ...(getPartGeometry(selectedObject, objects)?.holes.map(
+            (hole) => hole.id,
+          ) ?? []),
+          ...getPartStitches(selectedObject, objects).map(
+            (stitch) => stitch.id,
+          ),
+          ...getPartDimensions(selectedObject, objects).map(
+            (dimension) => dimension.id,
+          ),
+        ]
+      : objects
+          .filter(
+            (object) =>
+              dependsOnObject(object, selectedObject.id) ||
+              dependsOnObject(selectedObject, object.id),
+          )
+          .map((object) => object.id)
     : [];
 
   const requestCancel = useCallback(() => {
@@ -187,7 +210,26 @@ export function AppShell() {
       return;
     }
 
+    const sourcePart = objects.find(
+      (object) =>
+        object.type === "part" && object.contourSourceId === selectedObjectId,
+    );
+    if (sourcePart?.type === "part") {
+      window.alert(t("parts.warnings.sourceInUse", { name: sourcePart.name }));
+      return;
+    }
+
     commitState((document) => {
+      const selected = document.objects.find(
+        (object) => object.id === selectedObjectId,
+      );
+      if (selected?.type === "part")
+        return {
+          ...document,
+          objects: document.objects.filter(
+            (object) => object.id !== selectedObjectId,
+          ),
+        };
       const dependentIds = getDependentObjectIds(
         selectedObjectId,
         document.objects,
@@ -207,6 +249,8 @@ export function AppShell() {
     lockedObjectIds,
     requestCancel,
     selectedObjectId,
+    objects,
+    t,
   ]);
 
   const undoAction = useCallback(() => {
@@ -230,7 +274,7 @@ export function AppShell() {
   }, [canvasBusy, redo, requestCancel]);
 
   const copySelected = useCallback(() => {
-    if (!selectedObject) {
+    if (!selectedObject || selectedObject.type === "part") {
       return;
     }
 
@@ -258,7 +302,7 @@ export function AppShell() {
   }, [clipboard, commitState, state.currentLevelId]);
 
   const duplicate = useCallback(() => {
-    if (!selectedObject || selectedLocked) {
+    if (!selectedObject || selectedLocked || selectedObject.type === "part") {
       return;
     }
 
@@ -378,6 +422,20 @@ export function AppShell() {
                 onActiveLayerChange={setActiveLayer}
                 onLevelsChange={setLevels}
                 onCurrentLevelChange={setCurrentLevel}
+                objects={objects}
+                materials={materials}
+                selectedObjectId={selectedObjectId}
+                renderMode={state.renderMode}
+                onSelectionChange={setSelectedObjectId}
+                onMaterialsChange={(nextMaterials) =>
+                  commitState((document) => ({
+                    ...document,
+                    materials: nextMaterials,
+                  }))
+                }
+                onRenderModeChange={(renderMode) =>
+                  commitState((document) => ({ ...document, renderMode }))
+                }
               />
             </>
           )}
@@ -417,6 +475,8 @@ export function AppShell() {
             onViewBoxChange={setViewBox}
             onCursorPositionChange={setCursorPosition}
             onObjectCreate={addObject}
+            materials={materials}
+            renderMode={state.renderMode}
             onObjectUpdate={replaceObject}
             onObjectCommit={commitObject}
             onSelectionChange={setSelectedObjectId}
@@ -445,6 +505,9 @@ export function AppShell() {
               objects={objects}
               layers={layers}
               levels={levels}
+              materials={materials}
+              renderMode={state.renderMode}
+              onSelectionChange={setSelectedObjectId}
               readOnly={selectedLocked}
               onObjectChange={updateObject}
               onObjectCreate={addObject}

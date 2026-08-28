@@ -25,6 +25,7 @@ interface Props {
   selected: boolean;
   related: boolean;
   construction?: boolean;
+  materialColor?: string;
   screenUnit: number;
   onSelect: (id: string) => void;
   onMoveStart: (event: PointerEvent<SVGElement>, object: CadObject) => void;
@@ -46,6 +47,7 @@ export function CadObjectRenderer({
   selected,
   related,
   construction,
+  materialColor,
   screenUnit,
   onSelect,
   onMoveStart,
@@ -61,7 +63,8 @@ export function CadObjectRenderer({
       activeTool === "dimension" ||
       activeTool === "measure" ||
       activeTool === "fillet" ||
-      activeTool === "hole"
+      activeTool === "hole" ||
+      activeTool === "part"
     )
       return;
     event.stopPropagation();
@@ -70,6 +73,7 @@ export function CadObjectRenderer({
       onMoveStart(event, object);
   };
   const className = `cad-object cad-object--${object.type}${selected ? " cad-object--selected" : ""}${related ? " cad-object--related" : ""}${construction ? " cad-object--construction" : ""}`;
+  if (object.type === "part") return null;
   if (object.type === "stitch")
     return (
       <StitchRenderer
@@ -125,6 +129,9 @@ export function CadObjectRenderer({
         vectorEffect="non-scaling-stroke"
         onPointerDown={pointerDown}
         {...hover}
+        style={
+          materialColor ? { fill: materialColor, fillOpacity: 0.28 } : undefined
+        }
       />
     );
   if (object.type === "circle")
@@ -137,6 +144,9 @@ export function CadObjectRenderer({
         vectorEffect="non-scaling-stroke"
         onPointerDown={pointerDown}
         {...hover}
+        style={
+          materialColor ? { fill: materialColor, fillOpacity: 0.28 } : undefined
+        }
       />
     );
   return (
@@ -144,14 +154,17 @@ export function CadObjectRenderer({
       className={className}
       d={pathData(object)}
       fill={
-        object.type === "polyline" && object.closed
-          ? "rgba(126, 167, 209, 0.04)"
-          : "none"
+        materialColor && object.type === "polyline" && object.closed
+          ? materialColor
+          : object.type === "polyline" && object.closed
+            ? "rgba(126, 167, 209, 0.04)"
+            : "none"
       }
       strokeWidth={Math.max(screenUnit * 8, 1)}
       vectorEffect="non-scaling-stroke"
       onPointerDown={pointerDown}
       {...hover}
+      fillOpacity={materialColor ? 0.28 : undefined}
     />
   );
 }

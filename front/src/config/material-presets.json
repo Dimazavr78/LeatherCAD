@@ -1,0 +1,32 @@
+[
+  {
+    "id": "material-default",
+    "labelKey": "materials.presets.defaultLeather",
+    "thickness": 1.5,
+    "color": "#9b6b43"
+  },
+  {
+    "id": "material-vegetable-tanned",
+    "labelKey": "materials.presets.vegetableTanned",
+    "thickness": 1.5,
+    "color": "#b77a42"
+  },
+  {
+    "id": "material-chrome-tanned",
+    "labelKey": "materials.presets.chromeTanned",
+    "thickness": 1.2,
+    "color": "#765348"
+  },
+  {
+    "id": "material-pull-up",
+    "labelKey": "materials.presets.pullUp",
+    "thickness": 1.8,
+    "color": "#70452f"
+  },
+  {
+    "id": "material-suede",
+    "labelKey": "materials.presets.suede",
+    "thickness": 1.0,
+    "color": "#a98568"
+  }
+]

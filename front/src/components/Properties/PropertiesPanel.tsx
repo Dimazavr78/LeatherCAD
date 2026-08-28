@@ -6,8 +6,11 @@ import type {
   DimensionObject,
   EditorLevel,
   HoleObject,
+  Material,
+  PartObject,
   PathObject,
   StitchObject,
+  RenderMode,
 } from "../../types/cad";
 import { distance, normalizeSweep } from "../../editor/geometry/geometryMath";
 import {
@@ -24,15 +27,29 @@ import {
   isPointInHost,
   resolveHoleCenter,
 } from "../../editor/holes/holeGeometry";
+import {
+  getPartArea,
+  getPartDimensions,
+  getPartGeometry,
+  getPartOuterPerimeter,
+  getPartStitches,
+  getPartTotalCutLength,
+  isClosedPartContour,
+  validatePart,
+} from "../../editor/parts/partGeometry";
+import { getEffectiveThickness } from "../../editor/materials";
 
 interface Props {
   selectedObject: CadObject | null;
   objects: CadObject[];
   layers: CadLayer[];
   levels: EditorLevel[];
+  materials: Material[];
+  renderMode: RenderMode;
   readOnly: boolean;
   onObjectChange: (id: string, patch: Partial<CadObject>) => void;
   onObjectCreate: (object: CadObject) => void;
+  onSelectionChange: (id: string) => void;
   onEditStart: () => void;
   onEditCommit: () => void;
   onEditCancel: () => void;
@@ -71,6 +88,9 @@ function ObjectProperties({
   levels,
   onObjectChange,
   onObjectCreate,
+  materials,
+  renderMode: _renderMode,
+  onSelectionChange,
   ...events
 }: Props & { selectedObject: CadObject }) {
   const { t } = useTranslation();
@@ -325,7 +345,18 @@ function ObjectProperties({
         />
       </>
     );
-  } else if (object.type === "hole")
+  } else if (object.type === "part")
+    body = (
+      <PartProperties
+        part={object}
+        objects={objects}
+        materials={materials}
+        onChange={onObjectChange}
+        onSelectionChange={onSelectionChange}
+        {...events}
+      />
+    );
+  else if (object.type === "hole")
     body = (
       <HoleProperties
         hole={object}
@@ -399,7 +430,200 @@ function ObjectProperties({
         </label>
       </Group>
       {body}
+      {isClosedPartContour(object) &&
+        !objects.some(
+          (candidate) =>
+            candidate.type === "part" &&
+            candidate.contourSourceId === object.id,
+        ) && (
+          <button
+            type="button"
+            className="property-action"
+            onClick={() =>
+              onObjectCreate({
+                id: crypto.randomUUID(),
+                type: "part",
+                name: `${t("parts.defaultName")} ${objects.filter((candidate) => candidate.type === "part").length + 1}`,
+                contourSourceId: object.id,
+                materialId: "material-default",
+                manufacturing: {},
+                exportSettings: {
+                  exportOuterContour: true,
+                  exportHoles: true,
+                  exportStitch: true,
+                },
+              })
+            }
+          >
+            {t("parts.convert")}
+          </button>
+        )}
     </div>
+  );
+}
+
+function PartProperties({
+  part,
+  objects,
+  materials,
+  onChange,
+  onSelectionChange,
+  ...events
+}: {
+  part: PartObject;
+  objects: CadObject[];
+  materials: Material[];
+  onChange: Change;
+  onSelectionChange: (id: string) => void;
+  onEditStart: () => void;
+  onEditCommit: () => void;
+  onEditCancel: () => void;
+}) {
+  const { t } = useTranslation();
+  const geometry = getPartGeometry(part, objects);
+  const stitches = getPartStitches(part, objects);
+  const dimensions = getPartDimensions(part, objects);
+  const validation = validatePart(part, objects, materials);
+  const effectiveThickness = getEffectiveThickness(part, materials);
+  const selectedMaterial = materials.find(
+    (material) => material.id === part.materialId,
+  );
+  const status = (valid: boolean, key: string) => (
+    <div className={valid ? "validation-ok" : "property-warning"}>
+      {valid ? "✓" : "✕"} {t(key)}
+    </div>
+  );
+  return (
+    <>
+      <Group title={t("parts.titleSingle")}>
+        <label className="property-field">
+          <span>{t("parts.name")}</span>
+          <input
+            value={part.name}
+            onFocus={events.onEditStart}
+            onChange={(event) =>
+              onChange(part.id, { name: event.target.value })
+            }
+            onBlur={events.onEditCommit}
+          />
+        </label>
+        <div className="property-field property-read">
+          <span>{t("parts.contour")}</span>
+          <strong>
+            {geometry
+              ? `${t(`properties.${geometry.outerContour.type}.title`)} #${geometry.outerContour.id.slice(0, 6)}`
+              : t("properties.warnings.missingSource")}
+          </strong>
+        </div>
+        <button
+          type="button"
+          className="property-action"
+          onClick={() => onSelectionChange(part.contourSourceId)}
+        >
+          {t("parts.editContour")}
+        </button>
+      </Group>
+      <Group title={t("materials.titleSingle")}>
+        <label className="property-field">
+          <span>{t("parts.material")}</span>
+          <select
+            className="property-select"
+            value={part.materialId ?? ""}
+            onFocus={events.onEditStart}
+            onChange={(event) =>
+              onChange(part.id, { materialId: event.target.value || null })
+            }
+            onBlur={events.onEditCommit}
+          >
+            <option value="">{t("materials.none")}</option>
+            {materials.map((material) => (
+              <option key={material.id} value={material.id}>
+                {material.presetKey ? t(material.presetKey) : material.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Check
+          label={t("parts.overrideThickness")}
+          checked={part.thicknessOverride !== undefined}
+          onChange={(checked) =>
+            onChange(part.id, {
+              thicknessOverride: checked
+                ? (selectedMaterial?.thickness ?? 1.5)
+                : undefined,
+            })
+          }
+          {...events}
+        />
+        {part.thicknessOverride !== undefined ? (
+          <NumericProperty
+            label={t("parts.thickness")}
+            value={part.thicknessOverride}
+            min={0.1}
+            onChange={(value) =>
+              onChange(part.id, {
+                thicknessOverride: Math.max(0.1, Number(value)),
+              })
+            }
+            {...events}
+          />
+        ) : (
+          <Read
+            label={t("parts.effectiveThickness")}
+            value={effectiveThickness}
+          />
+        )}
+      </Group>
+      <Group title={t("parts.calculated")}>
+        <Read
+          label={t("parts.area")}
+          value={getPartArea(part, objects)}
+          suffix={` ${t("common.mm2")}`}
+        />
+        <Read
+          label={t("parts.outerPerimeter")}
+          value={getPartOuterPerimeter(part, objects)}
+        />
+        <Read
+          label={t("parts.totalCutLength")}
+          value={getPartTotalCutLength(part, objects)}
+        />
+        <Read
+          label={t("parts.holes")}
+          value={geometry?.holes.length ?? 0}
+          suffix=""
+        />
+        <Read label={t("parts.stitches")} value={stitches.length} suffix="" />
+        <Read
+          label={t("parts.dimensions")}
+          value={dimensions.length}
+          suffix=""
+        />
+      </Group>
+      <Group title={t("parts.validation")}>
+        {status(
+          validation.contourExists,
+          "parts.validationItems.contourExists",
+        )}
+        {status(
+          validation.contourClosed,
+          "parts.validationItems.closedContour",
+        )}
+        {status(
+          validation.noSelfIntersections,
+          "parts.validationItems.noSelfIntersections",
+        )}
+        {status(validation.holesInside, "parts.validationItems.holesInside")}
+        {status(
+          validation.materialExists,
+          "parts.validationItems.materialExists",
+        )}
+        {status(
+          validation.thicknessValid,
+          "parts.validationItems.thicknessValid",
+        )}
+      </Group>
+    </>
   );
 }
 

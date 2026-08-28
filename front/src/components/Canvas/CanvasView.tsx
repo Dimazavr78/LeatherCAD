@@ -12,6 +12,8 @@ import type {
   PathObject,
   Point,
   RectangleObject,
+  Material,
+  RenderMode,
   ResizeHandle,
   Tool,
 } from "../../types/cad";
@@ -55,12 +57,15 @@ import {
   resolveHoleCenter,
   setHoleCornerRadius,
 } from "../../editor/holes/holeGeometry";
+import { isClosedPartContour } from "../../editor/parts/partGeometry";
 import { calculateVertexFillet } from "../../editor/geometry/pathMath";
 
 interface Props {
   viewBox: ViewBox;
   objects: CadObject[];
   referenceObjects: CadObject[];
+  materials: Material[];
+  renderMode: RenderMode;
   lockedObjectIds: Set<string>;
   relatedObjectIds: string[];
   constructionLayerIds: string[];
@@ -390,7 +395,11 @@ export function CanvasView(props: Props) {
   };
 
   const startMove = (event: PointerEvent<SVGElement>, object: CadObject) => {
-    if (object.type === "stitch" || props.lockedObjectIds.has(object.id))
+    if (
+      object.type === "stitch" ||
+      object.type === "part" ||
+      props.lockedObjectIds.has(object.id)
+    )
       return;
     const point = canvasPoint(event.clientX, event.clientY);
     const svg = svgRef.current;
@@ -634,6 +643,35 @@ export function CanvasView(props: Props) {
       });
       return;
     }
+    if (activeTool === "part") {
+      const contour = [...objects]
+        .reverse()
+        .find(
+          (object) => isClosedPartContour(object) && isPointInHost(raw, object),
+        );
+      if (!contour) return;
+      if (
+        props.referenceObjects.some(
+          (object) =>
+            object.type === "part" && object.contourSourceId === contour.id,
+        )
+      )
+        return;
+      create({
+        id: crypto.randomUUID(),
+        type: "part",
+        name: `${t("parts.defaultName")} ${props.referenceObjects.filter((object) => object.type === "part").length + 1}`,
+        contourSourceId: contour.id,
+        materialId: "material-default",
+        manufacturing: {},
+        exportSettings: {
+          exportOuterContour: true,
+          exportHoles: true,
+          exportStitch: true,
+        },
+      });
+      return;
+    }
     if (activeTool === "rectangle") {
       event.currentTarget.setPointerCapture(event.pointerId);
       setRectangleDraft({
@@ -852,7 +890,8 @@ export function CanvasView(props: Props) {
       activeTool === "stitch" &&
       source &&
       source.type !== "stitch" &&
-      source.type !== "dimension"
+      source.type !== "dimension" &&
+      source.type !== "part"
     ) {
       create({
         id: crypto.randomUUID(),
@@ -896,7 +935,8 @@ export function CanvasView(props: Props) {
       !source ||
       source.type === "stitch" ||
       source.type === "dimension" ||
-      source.type === "hole"
+      source.type === "hole" ||
+      source.type === "part"
     )
       return;
     if (props.lockedObjectIds.has(source.id)) return;
@@ -1017,6 +1057,22 @@ export function CanvasView(props: Props) {
               construction={props.constructionLayerIds.includes(
                 object.layerId ?? "",
               )}
+              materialColor={
+                props.renderMode === "material"
+                  ? (() => {
+                      const part = props.referenceObjects.find(
+                        (candidate) =>
+                          candidate.type === "part" &&
+                          candidate.contourSourceId === object.id,
+                      );
+                      return part?.type === "part"
+                        ? props.materials.find(
+                            (material) => material.id === part.materialId,
+                          )?.color
+                        : undefined;
+                    })()
+                  : undefined
+              }
               editingDimensionId={editingDimensionId}
               onDimensionEditStart={
                 props.lockedObjectIds.has(object.id)
@@ -1100,6 +1156,7 @@ export function CanvasView(props: Props) {
             selected &&
             selected.type !== "rectangle" &&
             selected.type !== "hole" &&
+            selected.type !== "part" &&
             selected.type !== "stitch" &&
             selected.type !== "dimension" && (
               <ObjectHandles

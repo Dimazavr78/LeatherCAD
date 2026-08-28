@@ -44,9 +44,14 @@ export function resolveHoleCenter(
   hole: HoleObject,
   objects: CadObject[],
 ): Point | null {
+  const directHost = objects.find((object) => object.id === hole.hostObjectId);
+  const partHost =
+    directHost?.type === "part"
+      ? objects.find((object) => object.id === directHost.contourSourceId)
+      : directHost;
   const host = objects.find(
     (object): object is PathObject =>
-      object.id === hole.hostObjectId &&
+      object.id === partHost?.id &&
       (object.type === "rectangle" ||
         object.type === "circle" ||
         (object.type === "polyline" && object.closed)),
@@ -77,9 +82,14 @@ export function moveHole(
   objects: CadObject[],
   point: Point,
 ): HoleObject {
+  const directHost = objects.find((object) => object.id === hole.hostObjectId);
+  const partHost =
+    directHost?.type === "part"
+      ? objects.find((object) => object.id === directHost.contourSourceId)
+      : directHost;
   const host = objects.find(
     (object): object is PathObject =>
-      object.id === hole.hostObjectId &&
+      object.id === partHost?.id &&
       object.type !== "line" &&
       object.type !== "arc",
   );
