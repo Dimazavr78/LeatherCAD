@@ -656,6 +656,13 @@ export function CanvasView(props: Props) {
             object.type === "part" && object.contourSourceId === contour.id,
         )
       )
+        window.alert(t("parts.warnings.alreadyAssigned"));
+      if (
+        props.referenceObjects.some(
+          (object) =>
+            object.type === "part" && object.contourSourceId === contour.id,
+        )
+      )
         return;
       create({
         id: crypto.randomUUID(),

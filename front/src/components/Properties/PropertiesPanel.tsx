@@ -622,6 +622,10 @@ function PartProperties({
           validation.thicknessValid,
           "parts.validationItems.thicknessValid",
         )}
+        {status(
+          validation.stitchesInside,
+          "parts.validationItems.stitchesInside",
+        )}
       </Group>
     </>
   );

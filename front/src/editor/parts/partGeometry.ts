@@ -19,6 +19,7 @@ import {
   type ArcPathSegment,
   type CadPath,
 } from "../geometry/pathMath";
+import { generateStitch } from "../stitch/stitchMath";
 
 export interface PartGeometry {
   outerContour: PathObject;
@@ -33,6 +34,7 @@ export interface PartValidation {
   holesInside: boolean;
   materialExists: boolean;
   thicknessValid: boolean;
+  stitchesInside: boolean;
 }
 
 export function isClosedPartContour(
@@ -234,9 +236,26 @@ export function validatePart(
     }),
   );
   const materialExists =
-    part.materialId === null ||
+    part.materialId !== null &&
     materials.some((material) => material.id === part.materialId);
   const thicknessValid = getEffectiveThickness(part, materials) > 0;
+  const stitchesInside = Boolean(
+    geometry &&
+    getPartStitches(part, objects).every((stitch) => {
+      const source = objects.find(
+        (object) => object.id === stitch.sourceObjectId,
+      );
+      const path =
+        source?.type === "hole"
+          ? createHolePath(source, objects, stitch.offset)
+          : source && isClosedPartContour(source)
+            ? createPath(source, stitch.offset)
+            : null;
+      return generateStitch(path, stitch).holes.every((point) =>
+        isPointInHost(point, geometry.outerContour),
+      );
+    }),
+  );
   return {
     valid:
       contourExists &&
@@ -244,12 +263,14 @@ export function validatePart(
       noSelfIntersections &&
       holesInside &&
       materialExists &&
-      thicknessValid,
+      thicknessValid &&
+      stitchesInside,
     contourExists,
     contourClosed,
     noSelfIntersections,
     holesInside,
     materialExists,
     thicknessValid,
+    stitchesInside,
   };
 }

@@ -47,6 +47,7 @@
     "stitch": { "title": "Stitch" },
     "dimension": { "title": "Dimension" },
     "hole": { "title": "Hole" },
+    "part": { "title": "Part" },
     "sections": {
       "position": "Position",
       "size": "Size",
@@ -169,6 +170,65 @@
       "construction": "Construction"
     }
   },
+  "parts": {
+    "title": "Parts",
+    "titleSingle": "Part",
+    "defaultName": "Part",
+    "empty": "No parts yet",
+    "name": "Name",
+    "convert": "Convert to Part",
+    "contour": "Contour",
+    "outerContour": "Outer contour",
+    "editContour": "Edit contour",
+    "material": "Material",
+    "thickness": "Thickness",
+    "overrideThickness": "Override material thickness",
+    "effectiveThickness": "Effective thickness",
+    "calculated": "Calculated data",
+    "area": "Area",
+    "outerPerimeter": "Outer perimeter",
+    "totalCutLength": "Total cut length",
+    "holes": "Inner cutouts",
+    "stitches": "Stitches",
+    "dimensions": "Dimensions",
+    "validation": "Validation",
+    "validationItems": {
+      "contourExists": "Contour exists",
+      "closedContour": "Closed contour",
+      "noSelfIntersections": "No self-intersections",
+      "holesInside": "Holes inside part",
+      "materialExists": "Material is available",
+      "thicknessValid": "Thickness is positive",
+      "stitchesInside": "Stitches are inside material area"
+    },
+    "warnings": {
+      "sourceInUse": "This geometry is used by Part “{{name}}”. Delete the Part first.",
+      "alreadyAssigned": "This contour already belongs to a Part."
+    }
+  },
+  "materials": {
+    "title": "Materials",
+    "titleSingle": "Material",
+    "add": "Add material",
+    "edit": "Edit material",
+    "delete": "Delete material",
+    "rename": "Rename material",
+    "custom": "Custom leather",
+    "none": "No material",
+    "thickness": "Default thickness",
+    "color": "Preview color",
+    "notes": "Notes",
+    "renderMode": "Canvas mode",
+    "wireframe": "Wireframe",
+    "preview": "Material preview",
+    "presets": {
+      "defaultLeather": "Default Leather",
+      "vegetableTanned": "Vegetable Tanned",
+      "chromeTanned": "Chrome Tanned",
+      "pullUp": "Pull-up Leather",
+      "suede": "Suede"
+    }
+  },
   "levels": {
     "title": "Levels",
     "level": "Level",
@@ -190,7 +250,7 @@
     "objects": "Objects"
   },
   "zoom": { "fit": "Fit", "in": "Zoom in", "out": "Zoom out" },
-  "common": { "on": "ON", "off": "OFF", "mm": "mm" },
+  "common": { "on": "ON", "off": "OFF", "mm": "mm", "mm2": "mm²" },
   "language": {
     "title": "Language",
     "english": "English",

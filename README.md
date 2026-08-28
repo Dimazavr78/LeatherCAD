@@ -6,7 +6,7 @@
 
 [English](README.md) · [Русский](README.ru.md)
 
-![Version](https://img.shields.io/badge/version-0.0.11-d8b36a)
+![Version](https://img.shields.io/badge/version-0.0.12-d8b36a)
 ![React](https://img.shields.io/badge/React-19-61dafb)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6)
 ![Status](https://img.shields.io/badge/status-early%20development-orange)
@@ -16,7 +16,7 @@
 LeatherCAD is an open-source-oriented CAD application for designing leather patterns directly in the browser. It combines precise geometry, associative dimensions, stitching layouts, holes, layers, and an infinite SVG canvas in one focused workspace.
 
 > [!IMPORTANT]
-> LeatherCAD is in early development. Version `0.0.11` is suitable for experimentation, but project persistence, file export, and production manufacturing workflows are not implemented yet.
+> LeatherCAD is in early development. Version `0.0.12` is suitable for experimentation, but project persistence, file export, and production manufacturing workflows are not implemented yet.
 
 ## Highlights
 
@@ -30,6 +30,8 @@ LeatherCAD is an open-source-oriented CAD application for designing leather patt
 - Recursive dependency handling for safe deletion and Undo/Redo.
 - Layers, nested project levels, clipboard operations, and keyboard nudging.
 - English and Russian interface localization.
+- Semantic leather Parts that reference existing closed contours without duplicating geometry.
+- Built-in and custom materials, thickness overrides, material preview, cut metrics, and Part validation.
 
 ## Quick start
 
@@ -96,6 +98,8 @@ CAD geometry
 └── outer-contour stitching
 ```
 
+A `PartObject` acts as a semantic manufacturing wrapper around one closed contour. Its area, outer perimeter, total cut length, holes, stitches, and dimensions are resolved live from project references. Materials and render mode are document state and participate in Undo/Redo.
+
 `GeometryReference` identifies an object and one of its logical anchors. The same anchor provider is used by snapping and dimensions. Holes store their host and positioning rule rather than only a detached center point. Stitch points and displayed dimension values are generated from their current sources.
 
 ## Project structure
@@ -117,7 +121,7 @@ LeatherCAD/
 
 - No Save/Open or `.lcad` project format.
 - No DXF or PDF export.
-- No boolean operations, Trim, Extend, 3D, materials, or complete Part system.
+- No boolean operations, Trim, Extend, 3D, or assembly system.
 - Custom holes converted from polylines are not implemented yet.
 - Hole boundary constraints for circles and polylines currently use their bounding boxes.
 - Auto-dimension editing currently uses a dialog instead of an inline SVG input.
@@ -139,7 +143,7 @@ When a user-facing feature, command, limitation, or version changes, update both
 - Native project persistence and the `.lcad` format.
 - Custom hole contours and accurate host-boundary constraints.
 - DXF and PDF export.
-- Part and material systems.
+- Expanded manufacturing settings and export controls for Parts.
 - More direct-manipulation tools and inline parametric editing.
 
 ---

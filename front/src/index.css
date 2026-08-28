@@ -710,6 +710,66 @@ button {
   cursor: pointer;
 }
 
+.project-empty {
+  padding: 6px 12px;
+  color: #77818c;
+  font-size: 11px;
+}
+
+.part-tree {
+  display: grid;
+  margin: 3px 8px 7px;
+}
+
+.part-tree-root,
+.part-tree-child {
+  min-width: 0;
+  padding: 4px 6px;
+  color: #bac4ce;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  border: 0;
+}
+
+.part-tree-root {
+  color: #e4c27a;
+  font-weight: 600;
+}
+
+.part-tree-child {
+  padding-left: 15px;
+  font-size: 11px;
+}
+
+.part-tree-root:hover,
+.part-tree-child:hover {
+  background: #292e35;
+}
+
+.project-select-label {
+  display: grid;
+  gap: 4px;
+  padding: 5px 10px 8px;
+  color: #8d98a3;
+  font-size: 10px;
+}
+
+.material-swatch {
+  width: 11px;
+  height: 11px;
+  border: 1px solid #69727c;
+  border-radius: 50%;
+}
+
+.validation-ok {
+  padding: 3px 12px;
+  color: #80b987;
+  font-size: 11px;
+}
+
 .cad-rectangle-draft {
   fill: rgba(142, 148, 157, 0.12);
   stroke: #b8bdc5;

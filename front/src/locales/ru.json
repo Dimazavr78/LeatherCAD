@@ -53,6 +53,7 @@
     "stitch": { "title": "Шов" },
     "dimension": { "title": "Размер" },
     "hole": { "title": "Отверстие" },
+    "part": { "title": "Деталь" },
     "sections": {
       "position": "Положение",
       "size": "Размер",
@@ -175,6 +176,65 @@
       "construction": "Вспомогательные"
     }
   },
+  "parts": {
+    "title": "Детали",
+    "titleSingle": "Деталь",
+    "defaultName": "Деталь",
+    "empty": "Деталей пока нет",
+    "name": "Название",
+    "convert": "Преобразовать в деталь",
+    "contour": "Контур",
+    "outerContour": "Внешний контур",
+    "editContour": "Редактировать контур",
+    "material": "Материал",
+    "thickness": "Толщина",
+    "overrideThickness": "Переопределить толщину материала",
+    "effectiveThickness": "Итоговая толщина",
+    "calculated": "Расчётные данные",
+    "area": "Площадь",
+    "outerPerimeter": "Внешний периметр",
+    "totalCutLength": "Общая длина реза",
+    "holes": "Внутренние контуры",
+    "stitches": "Швы",
+    "dimensions": "Размеры",
+    "validation": "Проверка",
+    "validationItems": {
+      "contourExists": "Контур существует",
+      "closedContour": "Контур замкнут",
+      "noSelfIntersections": "Нет самопересечений",
+      "holesInside": "Отверстия внутри детали",
+      "materialExists": "Материал доступен",
+      "thicknessValid": "Толщина больше нуля",
+      "stitchesInside": "Швы находятся в области материала"
+    },
+    "warnings": {
+      "sourceInUse": "Эта геометрия используется деталью «{{name}}». Сначала удалите деталь.",
+      "alreadyAssigned": "Этот контур уже принадлежит детали."
+    }
+  },
+  "materials": {
+    "title": "Материалы",
+    "titleSingle": "Материал",
+    "add": "Добавить материал",
+    "edit": "Редактировать материал",
+    "delete": "Удалить материал",
+    "rename": "Переименовать материал",
+    "custom": "Пользовательская кожа",
+    "none": "Без материала",
+    "thickness": "Толщина по умолчанию",
+    "color": "Цвет предпросмотра",
+    "notes": "Заметки",
+    "renderMode": "Режим холста",
+    "wireframe": "Каркас",
+    "preview": "Предпросмотр материала",
+    "presets": {
+      "defaultLeather": "Кожа по умолчанию",
+      "vegetableTanned": "Кожа растительного дубления",
+      "chromeTanned": "Кожа хромового дубления",
+      "pullUp": "Кожа Pull-up",
+      "suede": "Замша"
+    }
+  },
   "levels": {
     "title": "Уровни",
     "level": "Уровень",
@@ -196,7 +256,7 @@
     "objects": "Объекты"
   },
   "zoom": { "fit": "Вписать", "in": "Увеличить", "out": "Уменьшить" },
-  "common": { "on": "ВКЛ", "off": "ВЫКЛ", "mm": "мм" },
+  "common": { "on": "ВКЛ", "off": "ВЫКЛ", "mm": "мм", "mm2": "мм²" },
   "language": { "title": "Язык", "english": "English", "russian": "Русский" },
   "panels": { "expand": "Развернуть", "collapse": "Свернуть" },
   "ruler": {

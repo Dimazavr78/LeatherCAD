@@ -41,6 +41,7 @@ import { ProjectPanel } from "../Project/ProjectPanel";
 import { DEFAULT_MATERIALS } from "../../editor/materials";
 import {
   getPartDimensions,
+  getPartBoundingBox,
   getPartGeometry,
   getPartStitches,
 } from "../../editor/parts/partGeometry";
@@ -391,6 +392,24 @@ export function AppShell() {
     setSelectedObjectId(null);
   };
   const levelPath = getLevelPath(levels, state.currentLevelId);
+  const selectFromProjectTree = (id: string) => {
+    setSelectedObjectId(id);
+    const part = objects.find((object) => object.id === id);
+    if (part?.type !== "part") return;
+    const bounds = getPartBoundingBox(part, objects);
+    if (!bounds) return;
+    const padding = Math.max(bounds.width, bounds.height) * 0.15 + 10;
+    setViewBox((current) => {
+      const width = bounds.width + padding * 2;
+      const height = width * (current.height / current.width);
+      return {
+        x: bounds.x + bounds.width / 2 - width / 2,
+        y: bounds.y + bounds.height / 2 - height / 2,
+        width,
+        height,
+      };
+    });
+  };
 
   return (
     <div className="app-shell">
@@ -426,7 +445,7 @@ export function AppShell() {
                 materials={materials}
                 selectedObjectId={selectedObjectId}
                 renderMode={state.renderMode}
-                onSelectionChange={setSelectedObjectId}
+                onSelectionChange={selectFromProjectTree}
                 onMaterialsChange={(nextMaterials) =>
                   commitState((document) => ({
                     ...document,
