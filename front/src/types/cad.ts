@@ -6,6 +6,7 @@ export interface Point {
 export interface CadObjectMetadata {
   layerId?: string;
   levelId?: string;
+  locked?: boolean;
 }
 
 export interface RectangleCornerRadii {
@@ -79,6 +80,26 @@ export interface StitchObject extends CadObjectMetadata {
   maxSpacingDeviation: number;
   showLine: boolean;
   showHoles: boolean;
+  startHoleIndex: number;
+  direction: "forward" | "reverse";
+  backstitchCount: number;
+  showHoleNumbers: boolean;
+}
+
+export type SeamDirection = "forward" | "reverse";
+export type SeamAlignment = "start" | "center" | "end" | "manual";
+export interface SeamPairObject extends CadObjectMetadata {
+  id: string;
+  type: "seamPair";
+  name: string;
+  stitchAId: string;
+  stitchBId: string;
+  directionA: SeamDirection;
+  directionB: SeamDirection;
+  alignment: SeamAlignment;
+  startHoleA: number;
+  startHoleB: number;
+  tolerance: number;
 }
 
 export type DimensionType =
@@ -191,7 +212,12 @@ export type RenderMode = "wireframe" | "material";
 export type PathObject =
   RectangleObject | LineObject | PolylineObject | CircleObject | ArcObject;
 export type CadObject =
-  PathObject | HoleObject | PartObject | StitchObject | DimensionObject;
+  | PathObject
+  | HoleObject
+  | PartObject
+  | StitchObject
+  | SeamPairObject
+  | DimensionObject;
 export type CadObjectType = CadObject["type"];
 export type Tool =
   | "select"
@@ -203,6 +229,7 @@ export type Tool =
   | "stitch"
   | "hole"
   | "part"
+  | "match-seam"
   | "fillet"
   | "dimension"
   | "measure";

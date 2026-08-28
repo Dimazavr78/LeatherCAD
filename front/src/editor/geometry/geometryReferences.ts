@@ -23,7 +23,8 @@ export function resolveGeometryReference(
     object.type === "stitch" ||
     object.type === "dimension" ||
     object.type === "hole" ||
-    object.type === "part"
+    object.type === "part" ||
+    object.type === "seamPair"
   )
     return reference.point ?? null;
   if (object.type === "line") {

@@ -35,6 +35,10 @@ const parameters: StitchObject = {
   maxSpacingDeviation: 5,
   showLine: true,
   showHoles: true,
+  startHoleIndex: 0,
+  direction: "forward",
+  backstitchCount: 0,
+  showHoleNumbers: false,
 };
 
 test("rectangle offset creates the expected inner perimeter", () => {

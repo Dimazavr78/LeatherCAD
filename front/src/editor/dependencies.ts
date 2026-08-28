@@ -11,6 +11,8 @@ export function directlyDependsOn(
       object.customSourceObjectId === sourceId
     );
   if (object.type === "part") return object.contourSourceId === sourceId;
+  if (object.type === "seamPair")
+    return object.stitchAId === sourceId || object.stitchBId === sourceId;
   if (object.type === "dimension")
     return (
       object.referenceA.objectId === sourceId ||

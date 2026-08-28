@@ -73,7 +73,7 @@ export function CadObjectRenderer({
       onMoveStart(event, object);
   };
   const className = `cad-object cad-object--${object.type}${selected ? " cad-object--selected" : ""}${related ? " cad-object--related" : ""}${construction ? " cad-object--construction" : ""}`;
-  if (object.type === "part") return null;
+  if (object.type === "part" || object.type === "seamPair") return null;
   if (object.type === "stitch")
     return (
       <StitchRenderer

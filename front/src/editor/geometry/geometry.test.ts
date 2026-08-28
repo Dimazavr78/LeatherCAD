@@ -219,6 +219,10 @@ test("stitch follows rounded rectangle arc segments after radius changes", () =>
     maxSpacingDeviation: 5,
     showLine: true,
     showHoles: true,
+    startHoleIndex: 0,
+    direction: "forward",
+    backstitchCount: 0,
+    showHoleNumbers: false,
   };
   const generated = generateStitch(path, parameters);
   assert.ok(generated.holes.length > 90);

@@ -375,6 +375,7 @@ function ObjectProperties({
         {...events}
       />
     );
+  else if (object.type === "seamPair") body = <></>;
   else
     body = (
       <DimensionProperties
@@ -911,6 +912,10 @@ function HoleProperties({
             maxSpacingDeviation: 5,
             showLine: true,
             showHoles: true,
+            startHoleIndex: 0,
+            direction: "forward",
+            backstitchCount: 0,
+            showHoleNumbers: false,
           })
         }
       >

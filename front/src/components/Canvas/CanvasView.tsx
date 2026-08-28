@@ -398,6 +398,7 @@ export function CanvasView(props: Props) {
     if (
       object.type === "stitch" ||
       object.type === "part" ||
+      object.type === "seamPair" ||
       props.lockedObjectIds.has(object.id)
     )
       return;
@@ -915,6 +916,10 @@ export function CanvasView(props: Props) {
         maxSpacingDeviation: 5,
         showLine: true,
         showHoles: true,
+        startHoleIndex: 0,
+        direction: "forward",
+        backstitchCount: 0,
+        showHoleNumbers: false,
       });
       return;
     }
@@ -943,7 +948,8 @@ export function CanvasView(props: Props) {
       source.type === "stitch" ||
       source.type === "dimension" ||
       source.type === "hole" ||
-      source.type === "part"
+      source.type === "part" ||
+      source.type === "seamPair"
     )
       return;
     if (props.lockedObjectIds.has(source.id)) return;
@@ -972,6 +978,10 @@ export function CanvasView(props: Props) {
           maxSpacingDeviation: 5,
           showLine: true,
           showHoles: true,
+          startHoleIndex: 0,
+          direction: "forward",
+          backstitchCount: 0,
+          showHoleNumbers: false,
         }
       : null;
   const draftPath = clickDraft ? [...clickDraft.points, clickDraft.cursor] : [];
@@ -1164,6 +1174,7 @@ export function CanvasView(props: Props) {
             selected.type !== "rectangle" &&
             selected.type !== "hole" &&
             selected.type !== "part" &&
+            selected.type !== "seamPair" &&
             selected.type !== "stitch" &&
             selected.type !== "dimension" && (
               <ObjectHandles
