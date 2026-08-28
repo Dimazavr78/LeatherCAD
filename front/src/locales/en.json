@@ -144,7 +144,11 @@
       "left": "From left",
       "right": "From right",
       "top": "From top",
-      "bottom": "From bottom"
+      "bottom": "From bottom",
+      "forward": "Forward",
+      "reverse": "Reverse",
+      "end": "End",
+      "manual": "Manual"
     },
     "warnings": {
       "spacing-deviation": "Large spacing adjustment",

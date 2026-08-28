@@ -105,6 +105,18 @@ function SeamInspectionOverlay({
   const top = viewBox.y + viewBox.height * 0.12;
   const rowGap = 42 * screenUnit;
   const position = (value: number) => left + value * width;
+  const maximumConnections = Math.max(
+    16,
+    Math.min(64, Math.floor(width / (14 * screenUnit))),
+  );
+  const connectionStep = Math.max(
+    1,
+    Math.ceil(result.matches.length / maximumConnections),
+  );
+  const visibleMatches = result.matches.filter(
+    (_, index) =>
+      index % connectionStep === 0 || index === result.matches.length - 1,
+  );
   return (
     <g className="seam-inspection-overlay">
       <rect
@@ -115,11 +127,14 @@ function SeamInspectionOverlay({
         height={rowGap + 76 * screenUnit}
         rx={8 * screenUnit}
       />
-      {result.matches.map((match, index) => {
+      {visibleMatches.map((match) => {
         const xA = position(match.holeA.normalizedPosition);
         const xB = position(match.holeB.normalizedPosition);
         return (
-          <g key={index} className={`seam-match seam-match--${match.status}`}>
+          <g
+            key={`${match.holeA.sourceIndex}-${match.holeB.sourceIndex}`}
+            className={`seam-match seam-match--${match.status}`}
+          >
             <title>
               {t("seams.holePair", {
                 a: match.holeA.sourceIndex + 1,
@@ -137,6 +152,7 @@ function SeamInspectionOverlay({
         x={left}
         y={top - 10 * screenUnit}
         className="seam-inspection-title"
+        fontSize={11 * screenUnit}
       >
         {seam.name} · {result.holeCountA} ↔ {result.holeCountB} ·{" "}
         {t(result.compatible ? "seams.compatible" : "seams.incompatible")}
@@ -145,6 +161,7 @@ function SeamInspectionOverlay({
         x={left}
         y={top + rowGap + 22 * screenUnit}
         className="seam-inspection-summary"
+        fontSize={10 * screenUnit}
       >
         {t("seams.maxAverage", {
           max: result.maxDeviation.toFixed(2),

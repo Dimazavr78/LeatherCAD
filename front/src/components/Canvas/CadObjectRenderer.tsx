@@ -87,6 +87,7 @@ export function CadObjectRenderer({
         objects={objects}
         className={className}
         selected={selected}
+        screenUnit={screenUnit}
         onPointerDown={pointerDown}
       />
     );
@@ -328,12 +329,14 @@ function StitchRenderer({
   objects,
   className,
   selected,
+  screenUnit,
   onPointerDown,
 }: {
   stitch: StitchObject;
   objects: CadObject[];
   className: string;
   selected: boolean;
+  screenUnit: number;
   onPointerDown: (event: PointerEvent<SVGElement>) => void;
 }) {
   const source = objects.find(
@@ -408,11 +411,12 @@ function StitchRenderer({
           <circle
             cx={orderedHoles[0].x}
             cy={orderedHoles[0].y}
-            r={stitch.holeSize * 1.6}
+            r={5 * screenUnit}
           />
           <text
-            x={orderedHoles[0].x + stitch.holeSize * 2}
-            y={orderedHoles[0].y - stitch.holeSize * 2}
+            x={orderedHoles[0].x + 7 * screenUnit}
+            y={orderedHoles[0].y - 7 * screenUnit}
+            fontSize={10 * screenUnit}
           >
             ▶ 1
           </text>
@@ -423,8 +427,9 @@ function StitchRenderer({
           <text
             key={`number-${hole.sourceIndex}`}
             className="stitch-hole-number"
-            x={hole.x + stitch.holeSize}
-            y={hole.y - stitch.holeSize}
+            x={hole.x + 5 * screenUnit}
+            y={hole.y - 5 * screenUnit}
+            fontSize={8 * screenUnit}
             pointerEvents="none"
           >
             {index + 1}

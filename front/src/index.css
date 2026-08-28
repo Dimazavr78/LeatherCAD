@@ -1096,7 +1096,6 @@ button {
 .stitch-start-marker text,
 .stitch-hole-number {
   fill: #9bd8ff;
-  font-size: 3px;
   font-weight: 600;
 }
 .stitch-hole--backstitch {
@@ -1131,7 +1130,6 @@ button {
 .seam-inspection-title,
 .seam-inspection-summary {
   fill: #d8dde5;
-  font-size: 11px;
 }
 .seam-inspection-summary {
   fill: #9aa3af;
