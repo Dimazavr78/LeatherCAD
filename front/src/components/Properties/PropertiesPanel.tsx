@@ -11,6 +11,7 @@ import type {
   PathObject,
   StitchObject,
   RenderMode,
+  SeamPairObject,
 } from "../../types/cad";
 import { distance, normalizeSweep } from "../../editor/geometry/geometryMath";
 import {
@@ -38,6 +39,11 @@ import {
   validatePart,
 } from "../../editor/parts/partGeometry";
 import { getEffectiveThickness } from "../../editor/materials";
+import {
+  analyzeSeamPair,
+  findBestFitHoleCount,
+  getGeneratedStitch,
+} from "../../editor/seams/seamMatch";
 
 interface Props {
   selectedObject: CadObject | null;
@@ -63,9 +69,29 @@ export function PropertiesPanel(props: Props) {
         <span>{t("properties.title").toUpperCase()}</span>
       </div>
       {props.selectedObject ? (
-        <fieldset className="properties-fieldset" disabled={props.readOnly}>
-          <ObjectProperties {...props} selectedObject={props.selectedObject} />
-        </fieldset>
+        <>
+          <button
+            type="button"
+            className="property-action property-lock"
+            onClick={() => {
+              props.onEditStart();
+              props.onObjectChange(props.selectedObject!.id, {
+                locked: !props.selectedObject!.locked,
+              });
+              props.onEditCommit();
+            }}
+          >
+            {props.selectedObject.locked
+              ? `🔒 ${t("objects.locked")}`
+              : `🔓 ${t("objects.unlocked")}`}
+          </button>
+          <fieldset className="properties-fieldset" disabled={props.readOnly}>
+            <ObjectProperties
+              {...props}
+              selectedObject={props.selectedObject}
+            />
+          </fieldset>
+        </>
       ) : (
         <div className="properties-empty">
           <div className="properties-empty-icon">◇</div>
@@ -375,7 +401,15 @@ function ObjectProperties({
         {...events}
       />
     );
-  else if (object.type === "seamPair") body = <></>;
+  else if (object.type === "seamPair")
+    body = (
+      <SeamPairProperties
+        seam={object}
+        objects={objects}
+        onChange={onObjectChange}
+        {...events}
+      />
+    );
   else
     body = (
       <DimensionProperties
@@ -991,6 +1025,172 @@ function DimensionProperties({
   );
 }
 
+function SeamPairProperties({
+  seam,
+  objects,
+  onChange,
+  ...events
+}: {
+  seam: SeamPairObject;
+  objects: CadObject[];
+  onChange: Change;
+  onEditStart: () => void;
+  onEditCommit: () => void;
+  onEditCancel: () => void;
+}) {
+  const { t } = useTranslation();
+  const stitches = objects.filter(
+    (object): object is StitchObject => object.type === "stitch",
+  );
+  const result = analyzeSeamPair(seam, objects);
+  const stitchA = stitches.find((stitch) => stitch.id === seam.stitchAId);
+  const stitchB = stitches.find((stitch) => stitch.id === seam.stitchBId);
+  const synchronize = (mode: "a" | "b" | "best") => {
+    if (!stitchA || !stitchB) return;
+    const generatedA = getGeneratedStitch(stitchA, objects);
+    const generatedB = getGeneratedStitch(stitchB, objects);
+    if (!generatedA || !generatedB) return;
+    let count =
+      mode === "a" ? generatedA.holes.length : generatedB.holes.length;
+    if (mode === "best")
+      count = findBestFitHoleCount(
+        generatedA.pathLength,
+        generatedB.pathLength,
+        stitchA.spacing,
+        stitchB.spacing,
+      ).holeCount;
+    if (count < 2) return;
+    events.onEditStart();
+    if (mode !== "b")
+      onChange(stitchB.id, {
+        mode: "fit-evenly",
+        alignment: "center",
+        cornerMode: "continuous",
+        spacing: generatedB.pathLength / count,
+      });
+    if (mode !== "a")
+      onChange(stitchA.id, {
+        mode: "fit-evenly",
+        alignment: "center",
+        cornerMode: "continuous",
+        spacing: generatedA.pathLength / count,
+      });
+    events.onEditCommit();
+  };
+  return (
+    <>
+      <Group title={t("seams.settings")}>
+        <label className="property-field">
+          <span>{t("seams.name")}</span>
+          <input
+            value={seam.name}
+            onFocus={events.onEditStart}
+            onChange={(event) =>
+              onChange(seam.id, { name: event.target.value })
+            }
+            onBlur={events.onEditCommit}
+          />
+        </label>
+        {(["A", "B"] as const).map((side) => (
+          <label className="property-field" key={side}>
+            <span>{t(`seams.stitch${side}`)}</span>
+            <select
+              className="property-select"
+              value={side === "A" ? seam.stitchAId : seam.stitchBId}
+              onFocus={events.onEditStart}
+              onChange={(event) =>
+                onChange(seam.id, {
+                  [side === "A" ? "stitchAId" : "stitchBId"]:
+                    event.target.value,
+                })
+              }
+              onBlur={events.onEditCommit}
+            >
+              {stitches.map((stitch, index) => (
+                <option value={stitch.id} key={stitch.id}>
+                  {t("seams.stitchName", { number: index + 1 })}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+        <Select
+          label={t("seams.alignment")}
+          value={seam.alignment}
+          values={["start", "center", "end", "manual"]}
+          onChange={(alignment) =>
+            onChange(seam.id, {
+              alignment: alignment as SeamPairObject["alignment"],
+            })
+          }
+          {...events}
+        />
+        {(["A", "B"] as const).map((side) => (
+          <Select
+            key={side}
+            label={t("seams.directionSide", { side })}
+            value={side === "A" ? seam.directionA : seam.directionB}
+            values={["forward", "reverse"]}
+            onChange={(direction) =>
+              onChange(seam.id, {
+                [side === "A" ? "directionA" : "directionB"]: direction,
+              })
+            }
+            {...events}
+          />
+        ))}
+        <NumericProperty
+          label={t("seams.tolerance")}
+          value={seam.tolerance}
+          min={0.01}
+          onChange={(value) =>
+            onChange(seam.id, { tolerance: Math.max(0.01, Number(value)) })
+          }
+          {...events}
+        />
+      </Group>
+      <Group title={t("seams.analysis")}>
+        <Read
+          label="A"
+          value={result.holeCountA}
+          suffix={` ${t("seams.holes")}`}
+        />
+        <Read
+          label="B"
+          value={result.holeCountB}
+          suffix={` ${t("seams.holes")}`}
+        />
+        <Read label={t("seams.lengthA")} value={result.lengthA} />
+        <Read label={t("seams.lengthB")} value={result.lengthB} />
+        <Read label={t("seams.difference")} value={result.difference} />
+        <Read label={t("seams.maximumDeviation")} value={result.maxDeviation} />
+        <Read
+          label={t("seams.averageDeviation")}
+          value={result.averageDeviation}
+        />
+        <div
+          className={`part-validation part-validation--${result.compatible ? "ok" : "error"}`}
+        >
+          {result.compatible
+            ? `✓ ${t("seams.compatible")}`
+            : `⚠ ${t("seams.incompatible")}`}
+        </div>
+      </Group>
+      <Group title={t("seams.synchronize")}>
+        <button className="property-action" onClick={() => synchronize("a")}>
+          {t("seams.useA")}
+        </button>
+        <button className="property-action" onClick={() => synchronize("b")}>
+          {t("seams.useB")}
+        </button>
+        <button className="property-action" onClick={() => synchronize("best")}>
+          {t("seams.bestFit")}
+        </button>
+      </Group>
+    </>
+  );
+}
+
 function StitchProperties({
   stitch,
   objects,
@@ -1128,6 +1328,46 @@ function StitchProperties({
         />
       </Group>
       <Group title={t("properties.sections.display")}>
+        <NumericProperty
+          label={t("seams.startHole")}
+          value={stitch.startHoleIndex + 1}
+          min={1}
+          onChange={(value) =>
+            onChange(stitch.id, {
+              startHoleIndex: Math.min(
+                Math.max(0, Math.trunc(Number(value)) - 1),
+                Math.max(0, generated.holes.length - 1),
+              ),
+            })
+          }
+          {...events}
+        />
+        <Select
+          label={t("seams.direction")}
+          value={stitch.direction}
+          values={["forward", "reverse"]}
+          onChange={(direction) =>
+            onChange(stitch.id, {
+              direction: direction as StitchObject["direction"],
+            })
+          }
+          {...events}
+        />
+        <NumericProperty
+          label={t("seams.backstitch")}
+          value={stitch.backstitchCount}
+          min={0}
+          onChange={updateNumber("backstitchCount", 0)}
+          {...events}
+        />
+        <Check
+          label={t("seams.showHoleNumbers")}
+          checked={stitch.showHoleNumbers}
+          onChange={(showHoleNumbers) =>
+            onChange(stitch.id, { showHoleNumbers })
+          }
+          {...events}
+        />
         <Check
           label={t("properties.fields.showLine")}
           checked={stitch.showLine}

@@ -21,6 +21,7 @@ function getToolId(tool: ToolConfig): Tool | null {
     "stitch",
     "hole",
     "part",
+    "match-seam",
     "fillet",
     "dimension",
     "measure",

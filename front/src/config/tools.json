@@ -132,6 +132,17 @@
     }
   },
   {
+    "id": "match-seam",
+    "icon": "↔",
+    "category": "leather",
+    "enabled": true,
+    "localization": {
+      "enabled": true,
+      "label": "toolbar.matchSeam.label",
+      "tooltip": "toolbar.matchSeam.tooltip"
+    }
+  },
+  {
     "id": "hardware",
     "icon": "◆",
     "category": "leather",

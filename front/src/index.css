@@ -1073,6 +1073,70 @@ button {
 /* RESPONSIVE                          */
 /* ---------------------------------- */
 
+.property-lock {
+  margin: 10px;
+  width: calc(100% - 20px);
+}
+.seam-tree-row {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  width: 100%;
+  gap: 6px;
+  align-items: center;
+}
+.seam-tree-row small {
+  color: #7f8792;
+}
+.stitch-start-marker circle {
+  fill: none;
+  stroke: #6dc7ff;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.stitch-start-marker text,
+.stitch-hole-number {
+  fill: #9bd8ff;
+  font-size: 3px;
+  font-weight: 600;
+}
+.stitch-hole--backstitch {
+  stroke-width: 2.5;
+}
+.seam-inspection-background {
+  fill: rgba(20, 23, 27, 0.94);
+  stroke: #59616c;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.seam-match line,
+.seam-match circle {
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.seam-match circle {
+  fill: #17191c;
+}
+.seam-match--match line,
+.seam-match--match circle {
+  stroke: #72b884;
+}
+.seam-match--warning line,
+.seam-match--warning circle {
+  stroke: #d4ad62;
+}
+.seam-match--error line,
+.seam-match--error circle {
+  stroke: #d66b68;
+}
+.seam-inspection-title,
+.seam-inspection-summary {
+  fill: #d8dde5;
+  font-size: 11px;
+}
+.seam-inspection-summary {
+  fill: #9aa3af;
+}
+
 @media (max-width: 900px) {
   .left-panel {
     width: 190px;

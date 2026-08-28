@@ -106,15 +106,20 @@ export function AppShell() {
         (layerById.get(a.layerId ?? "")?.order ?? 0) -
         (layerById.get(b.layerId ?? "")?.order ?? 0),
     );
-  const lockedObjectIds = useMemo(
-    () =>
-      new Set(
-        objects
-          .filter((object) => layerById.get(object.layerId ?? "")?.locked)
-          .map((object) => object.id),
-      ),
-    [layerById, objects],
-  );
+  const lockedObjectIds = useMemo(() => {
+    const locked = new Set(
+      objects
+        .filter(
+          (object) =>
+            object.locked || layerById.get(object.layerId ?? "")?.locked,
+        )
+        .map((object) => object.id),
+    );
+    for (const object of objects)
+      if (object.type === "part" && object.locked)
+        locked.add(object.contourSourceId);
+    return locked;
+  }, [layerById, objects]);
   const selectedLocked = selectedObject
     ? lockedObjectIds.has(selectedObject.id)
     : false;
@@ -167,6 +172,7 @@ export function AppShell() {
         ...document,
         objects: document.objects.map((object) => {
           if (object.id !== id) return object;
+          if (lockedObjectIds.has(id) && !("locked" in patch)) return object;
           const updated = { ...object, ...patch } as CadObject;
           return updated.type === "rectangle"
             ? normalizedRectangle(updated)
@@ -174,7 +180,7 @@ export function AppShell() {
         }),
       }));
     },
-    [updateLiveState],
+    [lockedObjectIds, updateLiveState],
   );
 
   const replaceObject = useCallback(

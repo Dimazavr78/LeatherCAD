@@ -14,6 +14,7 @@ import type {
   RectangleObject,
   Material,
   RenderMode,
+  SeamPairObject,
   ResizeHandle,
   Tool,
 } from "../../types/cad";
@@ -25,6 +26,7 @@ import {
   pointOnCircle,
 } from "../../editor/geometry/geometryMath";
 import { CadObjectRenderer } from "./CadObjectRenderer";
+import { analyzeSeamPair } from "../../editor/seams/seamMatch";
 import { HorizontalRuler } from "./HorizontalRuler";
 import { SelectionOverlay } from "./SelectionOverlay";
 import { VerticalRuler } from "./VerticalRuler";
@@ -83,6 +85,74 @@ interface Props {
   onInteractionCommit: () => void;
   onInteractionCancel: () => void;
   onBusyChange: (busy: boolean) => void;
+}
+
+function SeamInspectionOverlay({
+  seam,
+  objects,
+  viewBox,
+  screenUnit,
+}: {
+  seam: SeamPairObject;
+  objects: CadObject[];
+  viewBox: ViewBox;
+  screenUnit: number;
+}) {
+  const { t } = useTranslation();
+  const result = analyzeSeamPair(seam, objects);
+  const left = viewBox.x + viewBox.width * 0.12;
+  const width = viewBox.width * 0.76;
+  const top = viewBox.y + viewBox.height * 0.12;
+  const rowGap = 42 * screenUnit;
+  const position = (value: number) => left + value * width;
+  return (
+    <g className="seam-inspection-overlay">
+      <rect
+        className="seam-inspection-background"
+        x={left - 18 * screenUnit}
+        y={top - 28 * screenUnit}
+        width={width + 36 * screenUnit}
+        height={rowGap + 76 * screenUnit}
+        rx={8 * screenUnit}
+      />
+      {result.matches.map((match, index) => {
+        const xA = position(match.holeA.normalizedPosition);
+        const xB = position(match.holeB.normalizedPosition);
+        return (
+          <g key={index} className={`seam-match seam-match--${match.status}`}>
+            <title>
+              {t("seams.holePair", {
+                a: match.holeA.sourceIndex + 1,
+                b: match.holeB.sourceIndex + 1,
+                deviation: match.deltaMm.toFixed(2),
+              })}
+            </title>
+            <line x1={xA} y1={top} x2={xB} y2={top + rowGap} />
+            <circle cx={xA} cy={top} r={3.5 * screenUnit} />
+            <circle cx={xB} cy={top + rowGap} r={3.5 * screenUnit} />
+          </g>
+        );
+      })}
+      <text
+        x={left}
+        y={top - 10 * screenUnit}
+        className="seam-inspection-title"
+      >
+        {seam.name} · {result.holeCountA} ↔ {result.holeCountB} ·{" "}
+        {t(result.compatible ? "seams.compatible" : "seams.incompatible")}
+      </text>
+      <text
+        x={left}
+        y={top + rowGap + 22 * screenUnit}
+        className="seam-inspection-summary"
+      >
+        {t("seams.maxAverage", {
+          max: result.maxDeviation.toFixed(2),
+          average: result.averageDeviation.toFixed(2),
+        })}
+      </text>
+    </g>
+  );
 }
 interface PanState {
   pointerId: number;
@@ -171,6 +241,9 @@ export function CanvasView(props: Props) {
   const [stitchPreviewSourceId, setStitchPreviewSourceId] = useState<
     string | null
   >(null);
+  const [firstSeamStitchId, setFirstSeamStitchId] = useState<string | null>(
+    null,
+  );
   const [dimensionDraft, setDimensionDraft] = useState<DimensionDraft | null>(
     null,
   );
@@ -892,10 +965,37 @@ export function CanvasView(props: Props) {
   };
 
   const selectObject = (id: string) => {
-    if (props.lockedObjectIds.has(id)) return;
     const source = objects.find((object) => object.id === id);
+    if (activeTool === "match-seam") {
+      if (source?.type !== "stitch") return;
+      if (!firstSeamStitchId) {
+        setFirstSeamStitchId(source.id);
+        props.onSelectionChange(source.id);
+        return;
+      }
+      if (source.id === firstSeamStitchId) return;
+      const seamNumber =
+        props.referenceObjects.filter((object) => object.type === "seamPair")
+          .length + 1;
+      create({
+        id: crypto.randomUUID(),
+        type: "seamPair",
+        name: `Seam ${seamNumber}`,
+        stitchAId: firstSeamStitchId,
+        stitchBId: source.id,
+        directionA: "forward",
+        directionB: "forward",
+        alignment: "start",
+        startHoleA: 0,
+        startHoleB: 0,
+        tolerance: 0.5,
+      });
+      setFirstSeamStitchId(null);
+      return;
+    }
     if (
       activeTool === "stitch" &&
+      !props.lockedObjectIds.has(id) &&
       source &&
       source.type !== "stitch" &&
       source.type !== "dimension" &&
@@ -1108,6 +1208,14 @@ export function CanvasView(props: Props) {
               }
             />
           ))}
+          {selected?.type === "seamPair" && (
+            <SeamInspectionOverlay
+              seam={selected}
+              objects={props.referenceObjects}
+              viewBox={viewBox}
+              screenUnit={screenUnit}
+            />
+          )}
           {previewStitch && (
             <g className="stitch-preview">
               <CadObjectRenderer

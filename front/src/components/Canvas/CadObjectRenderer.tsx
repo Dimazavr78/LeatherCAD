@@ -8,6 +8,7 @@ import type {
 } from "../../types/cad";
 import { buildPathData, createPath } from "../../editor/geometry/pathMath";
 import { generateStitch } from "../../editor/stitch/stitchMath";
+import { orderStitchHoles } from "../../editor/seams/seamMatch";
 import {
   getDimensionValue,
   getRadialEnd,
@@ -68,7 +69,12 @@ export function CadObjectRenderer({
     )
       return;
     event.stopPropagation();
-    if (activeTool === "stitch" || activeTool === "select") onSelect(object.id);
+    if (
+      activeTool === "stitch" ||
+      activeTool === "select" ||
+      activeTool === "match-seam"
+    )
+      onSelect(object.id);
     if (activeTool === "select" && object.type !== "stitch")
       onMoveStart(event, object);
   };
@@ -80,6 +86,7 @@ export function CadObjectRenderer({
         stitch={object}
         objects={objects}
         className={className}
+        selected={selected}
         onPointerDown={pointerDown}
       />
     );
@@ -320,11 +327,13 @@ function StitchRenderer({
   stitch,
   objects,
   className,
+  selected,
   onPointerDown,
 }: {
   stitch: StitchObject;
   objects: CadObject[];
   className: string;
+  selected: boolean;
   onPointerDown: (event: PointerEvent<SVGElement>) => void;
 }) {
   const source = objects.find(
@@ -339,6 +348,11 @@ function StitchRenderer({
       ? createHolePath(source, objects, stitch.offset)
       : createPath(source, stitch.offset);
   const generated = generateStitch(path, stitch);
+  const orderedHoles = orderStitchHoles(
+    generated,
+    stitch.startHoleIndex,
+    stitch.direction,
+  );
   const guideline =
     generated.holes
       .map((hole, index) => `${index ? "L" : "M"} ${hole.x} ${hole.y}`)
@@ -353,13 +367,13 @@ function StitchRenderer({
         />
       )}
       {stitch.showHoles &&
-        generated.holes.map((hole, index) => {
+        orderedHoles.map((hole, index) => {
           const transform = `rotate(${hole.angle} ${hole.x} ${hole.y})`;
           if (stitch.holeShape === "round")
             return (
               <circle
                 key={index}
-                className="stitch-hole"
+                className={`stitch-hole${index < stitch.backstitchCount ? " stitch-hole--backstitch" : ""}`}
                 cx={hole.x}
                 cy={hole.y}
                 r={stitch.holeSize / 2}
@@ -369,7 +383,7 @@ function StitchRenderer({
             return (
               <line
                 key={index}
-                className="stitch-hole"
+                className={`stitch-hole${index < stitch.backstitchCount ? " stitch-hole--backstitch" : ""}`}
                 x1={hole.x - stitch.holeSize / 2}
                 y1={hole.y}
                 x2={hole.x + stitch.holeSize / 2}
@@ -380,7 +394,7 @@ function StitchRenderer({
           return (
             <rect
               key={index}
-              className="stitch-hole"
+              className={`stitch-hole${index < stitch.backstitchCount ? " stitch-hole--backstitch" : ""}`}
               x={hole.x - stitch.holeSize / 2}
               y={hole.y - stitch.holeSize / 2}
               width={stitch.holeSize}
@@ -389,6 +403,33 @@ function StitchRenderer({
             />
           );
         })}
+      {(selected || stitch.showHoleNumbers) && orderedHoles[0] && (
+        <g className="stitch-start-marker" pointerEvents="none">
+          <circle
+            cx={orderedHoles[0].x}
+            cy={orderedHoles[0].y}
+            r={stitch.holeSize * 1.6}
+          />
+          <text
+            x={orderedHoles[0].x + stitch.holeSize * 2}
+            y={orderedHoles[0].y - stitch.holeSize * 2}
+          >
+            ▶ 1
+          </text>
+        </g>
+      )}
+      {stitch.showHoleNumbers &&
+        orderedHoles.map((hole, index) => (
+          <text
+            key={`number-${hole.sourceIndex}`}
+            className="stitch-hole-number"
+            x={hole.x + stitch.holeSize}
+            y={hole.y - stitch.holeSize}
+            pointerEvents="none"
+          >
+            {index + 1}
+          </text>
+        ))}
     </g>
   );
 }

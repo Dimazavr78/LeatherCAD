@@ -16,6 +16,7 @@ import {
   getPartGeometry,
   getPartStitches,
 } from "../../editor/parts/partGeometry";
+import { analyzeSeamPair } from "../../editor/seams/seamMatch";
 
 interface Props {
   layers: CadLayer[];
@@ -45,6 +46,7 @@ export function ProjectPanel(props: Props) {
     (level) => level.id === props.currentLevelId,
   );
   const parts = props.objects.filter((object) => object.type === "part");
+  const seams = props.objects.filter((object) => object.type === "seamPair");
   const updateLayer = (id: string, patch: Partial<CadLayer>) =>
     props.onLayersChange(
       props.layers.map((layer) =>
@@ -119,6 +121,28 @@ export function ProjectPanel(props: Props) {
         >
           + {t("layers.layer")}
         </button>
+      </section>
+      <section>
+        <div className="section-title">{t("seams.title").toUpperCase()}</div>
+        {seams.length === 0 && (
+          <div className="project-empty">{t("seams.empty")}</div>
+        )}
+        {seams.map((seam) => {
+          const result = analyzeSeamPair(seam, props.objects);
+          return (
+            <button
+              key={seam.id}
+              className={`project-row-name seam-tree-row ${props.selectedObjectId === seam.id ? "project-row--active" : ""}`}
+              onClick={() => props.onSelectionChange(seam.id)}
+            >
+              <span>{result.compatible ? "✓" : result.valid ? "⚠" : "✕"}</span>
+              <span>{seam.name}</span>
+              <small>
+                {result.holeCountA} ↔ {result.holeCountB}
+              </small>
+            </button>
+          );
+        })}
       </section>
       <section>
         <div className="section-title">{t("levels.title").toUpperCase()}</div>
@@ -199,7 +223,7 @@ export function ProjectPanel(props: Props) {
                 className={`project-row-name part-tree-root ${props.selectedObjectId === part.id ? "project-row--active" : ""}`}
                 onClick={() => props.onSelectionChange(part.id)}
               >
-                ◇ {part.name}
+                {part.locked ? "🔒" : "🔓"} ◇ {part.name}
               </button>
               <button
                 className="part-tree-child"

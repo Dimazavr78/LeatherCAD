@@ -36,6 +36,10 @@
       "tooltip": "Измерить расстояние между точками"
     },
     "part": { "label": "Деталь", "tooltip": "Деталь из кожи" },
+    "matchSeam": {
+      "label": "Сопоставить швы",
+      "tooltip": "Связать две разметки шва"
+    },
     "stitch": { "label": "Шов", "tooltip": "Линия шва" },
     "holes": { "label": "Отверстия", "tooltip": "Отверстия" },
     "hardware": { "label": "Фурнитура", "tooltip": "Фурнитура" },
@@ -54,6 +58,7 @@
     "dimension": { "title": "Размер" },
     "hole": { "title": "Отверстие" },
     "part": { "title": "Деталь" },
+    "seamPair": { "title": "Сопряжение шва" },
     "sections": {
       "position": "Положение",
       "size": "Размер",
@@ -235,6 +240,38 @@
       "suede": "Замша"
     }
   },
+  "seams": {
+    "title": "Швы",
+    "empty": "Нет сопряжений швов",
+    "settings": "Сопряжение шва",
+    "name": "Название",
+    "stitchA": "Первый шов",
+    "stitchB": "Второй шов",
+    "stitchName": "Шов {{number}}",
+    "alignment": "Выравнивание",
+    "direction": "Направление",
+    "directionSide": "Направление {{side}}",
+    "tolerance": "Допуск",
+    "analysis": "Анализ",
+    "holes": "отверстий",
+    "lengthA": "Длина шва A",
+    "lengthB": "Длина шва B",
+    "difference": "Разница",
+    "maximumDeviation": "Максимальное отклонение",
+    "averageDeviation": "Среднее отклонение",
+    "compatible": "Совместимо",
+    "incompatible": "Несовместимо",
+    "synchronize": "Синхронизировать швы",
+    "useA": "Использовать A как основной",
+    "useB": "Использовать B как основной",
+    "bestFit": "Оптимальное распределение",
+    "startHole": "Начало шва",
+    "backstitch": "Закрепочных стежков",
+    "showHoleNumbers": "Показывать номера отверстий",
+    "holePair": "Отверстие {{a}} ↔ отверстие {{b}} · Отклонение: {{deviation}} мм",
+    "maxAverage": "Максимум {{max}} мм · Среднее {{average}} мм"
+  },
+  "objects": { "locked": "Заблокировано", "unlocked": "Разблокировано" },
   "levels": {
     "title": "Уровни",
     "level": "Уровень",
