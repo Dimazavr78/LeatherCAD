@@ -1137,6 +1137,21 @@ button {
   fill: #9aa3af;
 }
 
+.canvas-tool-hint {
+  position: absolute;
+  z-index: 4;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 7px 12px;
+  border: 1px solid #59616c;
+  border-radius: 5px;
+  background: rgba(20, 23, 27, 0.94);
+  color: #d8dde5;
+  font-size: 12px;
+  pointer-events: none;
+}
+
 @media (max-width: 900px) {
   .left-panel {
     width: 190px;

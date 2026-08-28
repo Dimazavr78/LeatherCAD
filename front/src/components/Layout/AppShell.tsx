@@ -123,6 +123,30 @@ export function AppShell() {
   const selectedLocked = selectedObject
     ? lockedObjectIds.has(selectedObject.id)
     : false;
+  const selectedLockReason = selectedObject
+    ? selectedObject.locked
+      ? "object"
+      : layerById.get(selectedObject.layerId ?? "")?.locked
+        ? "layer"
+        : objects.some(
+              (object) =>
+                object.type === "part" &&
+                object.locked &&
+                object.contourSourceId === selectedObject.id,
+            )
+          ? "part"
+          : null
+    : null;
+  const toggleObjectLock = useCallback(
+    (id: string) =>
+      commitState((document) => ({
+        ...document,
+        objects: document.objects.map((object) =>
+          object.id === id ? { ...object, locked: !object.locked } : object,
+        ),
+      })),
+    [commitState],
+  );
   const relatedObjectIds = selectedObject
     ? selectedObject.type === "part"
       ? [
@@ -534,6 +558,8 @@ export function AppShell() {
               renderMode={state.renderMode}
               onSelectionChange={setSelectedObjectId}
               readOnly={selectedLocked}
+              lockReason={selectedLockReason}
+              onToggleObjectLock={toggleObjectLock}
               onObjectChange={updateObject}
               onObjectCreate={addObject}
               onEditStart={beginTransaction}

@@ -53,6 +53,8 @@ interface Props {
   materials: Material[];
   renderMode: RenderMode;
   readOnly: boolean;
+  lockReason: "object" | "layer" | "part" | null;
+  onToggleObjectLock: (id: string) => void;
   onObjectChange: (id: string, patch: Partial<CadObject>) => void;
   onObjectCreate: (object: CadObject) => void;
   onSelectionChange: (id: string) => void;
@@ -73,17 +75,18 @@ export function PropertiesPanel(props: Props) {
           <button
             type="button"
             className="property-action property-lock"
-            onClick={() => {
-              props.onEditStart();
-              props.onObjectChange(props.selectedObject!.id, {
-                locked: !props.selectedObject!.locked,
-              });
-              props.onEditCommit();
-            }}
+            disabled={
+              props.lockReason === "layer" || props.lockReason === "part"
+            }
+            onClick={() => props.onToggleObjectLock(props.selectedObject!.id)}
           >
-            {props.selectedObject.locked
-              ? `🔒 ${t("objects.locked")}`
-              : `🔓 ${t("objects.unlocked")}`}
+            {props.lockReason === "layer"
+              ? `🔒 ${t("objects.lockedByLayer")}`
+              : props.lockReason === "part"
+                ? `🔒 ${t("objects.lockedByPart")}`
+                : props.selectedObject.locked
+                  ? `🔒 ${t("objects.locked")}`
+                  : `🔓 ${t("objects.unlocked")}`}
           </button>
           <fieldset className="properties-fieldset" disabled={props.readOnly}>
             <ObjectProperties

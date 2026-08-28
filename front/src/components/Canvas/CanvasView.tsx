@@ -1101,6 +1101,13 @@ export function CanvasView(props: Props) {
         height={size.height}
       />
       <div ref={stageRef} className="canvas-stage">
+        {activeTool === "match-seam" && (
+          <div className="canvas-tool-hint">
+            {firstSeamStitchId
+              ? t("seams.selectSecond")
+              : t("seams.selectFirst")}
+          </div>
+        )}
         <svg
           ref={svgRef}
           className={`canvas-svg canvas-svg--${activeTool} ${panning ? "canvas-svg--panning" : ""}`}

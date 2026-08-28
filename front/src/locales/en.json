@@ -237,6 +237,8 @@
   "seams": {
     "title": "Seams",
     "empty": "No seam pairs",
+    "selectFirst": "Select the first stitch",
+    "selectSecond": "First stitch selected — select the second stitch",
     "settings": "Seam Pair",
     "name": "Name",
     "stitchA": "First Stitch",
@@ -266,7 +268,12 @@
     "maxAverage": "Maximum {{max}} mm · Average {{average}} mm",
     "syncPreview": "Current: A {{currentA}} / B {{currentB}} holes\nProposed: A {{proposed}} / B {{proposed}} holes\nMaximum spacing deviation: {{deviation}}%\n\nApply synchronization?"
   },
-  "objects": { "locked": "Locked", "unlocked": "Unlocked" },
+  "objects": {
+    "locked": "Locked",
+    "unlocked": "Unlocked",
+    "lockedByLayer": "Locked by layer — unlock the layer in Project",
+    "lockedByPart": "Locked by Part — unlock the Part first"
+  },
   "levels": {
     "title": "Levels",
     "level": "Level",
